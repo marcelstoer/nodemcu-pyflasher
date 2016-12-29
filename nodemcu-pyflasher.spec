@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['nodemcu-flasher.py', 'Main.py'],
-             pathex=['/Users/marcelstoer/Data/Python/NodeMCU-Flasher'],
+a = Analysis(['nodemcu-pyflasher.py', 'Main.py'],
+             pathex=['/Users/marcelstoer/Data/Python/NodeMCU-PyFlasher'],
              binaries=None,
              datas=None,
              hiddenimports=[],
@@ -19,7 +19,7 @@ pyz = PYZ(a.pure, a.zipped_data,
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
-          name='nodemcu-flasher',
+          name='nodemcu-pyflasher',
           debug=False,
           strip=False,
           upx=True,
@@ -30,4 +30,4 @@ coll = COLLECT(exe,
                a.datas,
                strip=False,
                upx=True,
-               name='nodemcu-flasher')
+               name='nodemcu-pyflasher')
