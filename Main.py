@@ -6,6 +6,7 @@ import wx.lib.mixins.inspection
 import sys
 import esptool
 import threading
+import images as images
 from serial.tools import list_ports
 from esptool import ESPROM
 from argparse import Namespace
@@ -263,7 +264,7 @@ class NodeMcuFlasher(wx.Frame):
 
     def __on_help_about(self, event):
         from About import MyAboutBox
-        about = MyAboutBox(self, __version__)
+        about = MyAboutBox(self)
         about.ShowModal()
         about.Destroy()
 
@@ -303,11 +304,6 @@ class MySplashScreen(wx.SplashScreen):
 # ----------------------------------------------------------------------------
 class App(wx.App, wx.lib.mixins.inspection.InspectionMixin):
     def OnInit(self):
-
-        import images as i
-        global images
-        images = i
-
         wx.SystemOptions.SetOptionInt("mac.window-plain-transition", 1)
         self.SetAppName("NodeMCU PyFlasher")
 
