@@ -1,74 +1,63 @@
-import sys
 
-import wx                  # This module uses the new wx namespace
+# coding=utf-8
+
+import wx
 import wx.html
 import wx.lib.wxpTag
 
-#---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+
 
 class MyAboutBox(wx.Dialog):
     text = '''
 <html>
-<body bgcolor="#AC76DE">
-<center><table bgcolor="#458154" width="100%%" cellspacing="0"
-cellpadding="0" border="1">
-<tr>
-    <td align="center">
-    <h1>wxPython %s</h1>
-    (%s)<br>
-    Running on Python %s<br>
-    </td>
-</tr>
-</table>
+<body>
+<style>
+    body {
+        font-family: Arial
+    }
+    a {
+        color: #004CE5
+    }
+</style>
+<center>
+    <img src="images/python-256.png" width="64" height="64">
+    <img src="images/icon-256.png" width="64" height="64">
+    <img src="images/espressif-256.png" width="64" height="64">
+    <img src="images/wxpython-256.png" width="64" height="43">
 
-<p><b>wxPython</b> is a Python extension module that
-encapsulates the wxWindows GUI classes.</p>
+    <h1>NodeMCU PyFlasher</h1>
 
-<p>This demo shows off some of the capabilities
-of <b>wxPython</b>.  Select items from the menu or tree control,
-sit back and enjoy.  Be sure to take a peek at the source code for each
-demo item so you can learn how to use the classes yourself.</p>
+    <p>Version %s</p>
 
-<p><b>wxPython</b> is brought to you by <b>Robin Dunn</b> and<br>
-<b>Total Control Software,</b> Copyright (c) 1997-2011.</p>
+    <p>Fork the <a href="https://github.com/marcelstoer/nodemcu-pyflasher">project on GitHub</a> and help improve it
+        for all!</p>
 
-<p>
-<font size="-1">Please see <i>license.txt</i> for licensing information.</font>
-</p>
+    <p>© 2016-2017 Marcel Stör. Licensed under MIT.</p>
 
-<p><wxp module="wx" class="Button">
-    <param name="label" value="Okay">
-    <param name="id"    value="ID_OK">
-</wxp></p>
+    <p>
+        <wxp module="wx" class="Button">
+            <param name="label" value="Close">
+            <param name="id" value="ID_OK">
+        </wxp>
+    </p>
 </center>
 </body>
 </html>
 '''
-    def __init__(self, parent):
-        wx.Dialog.__init__(self, parent, -1, 'About the wxPython demo',)
+
+    def __init__(self, parent, version):
+        wx.Dialog.__init__(self, parent, -1, "About NodeMCU PyFlasher")
         html = wx.html.HtmlWindow(self, -1, size=(420, -1))
         if "gtk2" in wx.PlatformInfo or "gtk3" in wx.PlatformInfo:
             html.SetStandardFonts()
-        py_version = sys.version.split()[0]
-        txt = self.text % (wx.VERSION_STRING,
-                           ", ".join(wx.PlatformInfo[1:]),
-                           py_version
-                           )
+        txt = self.text % version
         html.SetPage(txt)
-        btn = html.FindWindowById(wx.ID_OK)
         ir = html.GetInternalRepresentation()
-        html.SetSize( (ir.GetWidth()+25, ir.GetHeight()+25) )
+        html.SetSize((ir.GetWidth() + 25, ir.GetHeight() + 25))
         self.SetClientSize(html.GetSize())
         self.CentreOnParent(wx.BOTH)
 
-#---------------------------------------------------------------------------
 
-
-
-if __name__ == '__main__':
-    app = wx.App()
-    dlg = MyAboutBox(None)
-    dlg.ShowModal()
-    dlg.Destroy()
-    app.MainLoop()
-
+# ---------------------------------------------------------------------------
