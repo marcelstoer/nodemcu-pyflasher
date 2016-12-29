@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 pyinstaller --noconfirm --log-level=INFO \
     --onefile --windowed \
     --name="NodeMCU PyFlasher" \
