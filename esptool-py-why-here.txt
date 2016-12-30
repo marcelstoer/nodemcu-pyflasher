@@ -1,0 +1,12 @@
+If esptool.py is installed using python setup.py` from a checked out version it creates something like the following
+in the Python environment
+
+esptool.py file containing
+
+#!/usr/local/opt/python/bin/python2.7
+# EASY-INSTALL-SCRIPT: 'esptool==1.3.dev0','esptool.py'
+__requires__ = 'esptool==1.3.dev0'
+__import__('pkg_resources').run_script('esptool==1.3.dev0', 'esptool.py')
+
+PyInstaller (and cx_Freeze) doesn't support pkg_resources and complains about 'ImportError: "No module named
+pkg_resources"'. This can be avoided if the application maintains a local copy of esptool.py.
