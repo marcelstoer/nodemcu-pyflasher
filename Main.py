@@ -11,11 +11,6 @@ from serial.tools import list_ports
 from esptool import ESPROM
 from argparse import Namespace
 
-# stuff for debugging
-print "Python version:", sys.version
-print "wxPython version:", wx.version()
-print "esptool.py version:", esptool.version(None)
-
 __version__ = "0.1.0"
 
 # ---------------------------------------------------------------------------
