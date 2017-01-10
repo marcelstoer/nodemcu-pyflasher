@@ -11,7 +11,7 @@ from serial.tools import list_ports
 from esptool import ESPROM
 from argparse import Namespace
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 # ---------------------------------------------------------------------------
 

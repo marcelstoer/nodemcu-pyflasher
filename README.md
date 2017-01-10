@@ -11,7 +11,6 @@ Check the [releases section](https://github.com/marcelstoer/nodemcu-pyflasher/re
 Scan the [list of open issues](https://github.com/marcelstoer/nodemcu-pyflasher/issues) for bugs and pending features.
 
 - Due to [pyinstaller/pyinstaller#2355](https://github.com/pyinstaller/pyinstaller/issues/2355) I can't provide an app bundle for macOS yet. The PyInstaller `.spec` file and the build script are ready, though.
-- Due to [esptool/issues/#155](https://github.com/espressif/esptool/issues/155) you'll see "debug" output from esptool.py when it attempts to reconnect to your device.
 
 **Note** 
 
