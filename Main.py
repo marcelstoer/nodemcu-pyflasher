@@ -52,21 +52,21 @@ class FlashingThread(threading.Thread):
     def __init__(self, parent, config):
         threading.Thread.__init__(self)
         self.daemon = True
-        self.__parent = parent
-        self.__config = config
+        self._parent = parent
+        self._config = config
 
     def run(self):
-        esp = ESPROM(port=self.__config.port)
+        esp = ESPROM(port=self._config.port)
         args = Namespace()
         args.flash_size = "detect"
-        args.flash_mode = self.__config.mode
+        args.flash_mode = self._config.mode
         args.flash_freq = "40m"
         args.no_progress = False
         args.verify = True
-        args.baud = self.__config.baud
-        args.addr_filename = [[int("0x00000", 0), open(self.__config.firmware_path, 'rb')]]
+        args.baud = self._config.baud
+        args.addr_filename = [[int("0x00000", 0), open(self._config.firmware_path, 'rb')]]
         # needs connect() before each operation, see  https://github.com/espressif/esptool/issues/157
-        if self.__config.erase_before_flash:
+        if self._config.erase_before_flash:
             esp.connect()
             esptool.erase_flash(esp, args)
         esp.connect()
@@ -97,12 +97,12 @@ class NodeMcuFlasher(wx.Frame):
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, -1, title, size=(700, 650),
                           style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
-        self.__config = FlashConfig()
+        self._config = FlashConfig()
 
-        self.__build_status_bar()
-        self.__set_icons()
-        self.__build_menu_bar()
-        self.__init_ui()
+        self._build_status_bar()
+        self._set_icons()
+        self._build_menu_bar()
+        self._init_ui()
 
         sys.stdout = RedirectText(self.console_ctrl)
 
@@ -110,39 +110,39 @@ class NodeMcuFlasher(wx.Frame):
         self.Centre(wx.BOTH)
         self.Show(True)
 
-    def __init_ui(self):
+    def _init_ui(self):
         def on_reload(event):
-            self.choice.SetItems(self.__get_serial_ports())
+            self.choice.SetItems(self._get_serial_ports())
 
         def on_baud_changed(event):
             radio_button = event.GetEventObject()
 
             if radio_button.GetValue():
-                self.__config.baud = radio_button.rate
+                self._config.baud = radio_button.rate
 
         def on_mode_changed(event):
             radio_button = event.GetEventObject()
 
             if radio_button.GetValue():
-                self.__config.mode = radio_button.mode
+                self._config.mode = radio_button.mode
 
         def on_erase_changed(event):
             radio_button = event.GetEventObject()
 
             if radio_button.GetValue():
-                self.__config.erase_before_flash = radio_button.erase
+                self._config.erase_before_flash = radio_button.erase
 
         def on_clicked(event):
             self.console_ctrl.SetValue("")
-            worker = FlashingThread(self, self.__config)
+            worker = FlashingThread(self, self._config)
             worker.start()
 
         def on_select_port(event):
             choice = event.GetEventObject()
-            self.__config.port = choice.GetString(choice.GetSelection())
+            self._config.port = choice.GetString(choice.GetSelection())
 
         def on_pick_file(event):
-            self.__config.firmware_path = event.GetPath().replace("'", "")
+            self._config.firmware_path = event.GetPath().replace("'", "")
 
         panel = wx.Panel(self)
 
@@ -150,7 +150,7 @@ class NodeMcuFlasher(wx.Frame):
 
         fgs = wx.FlexGridSizer(7, 2, 10, 10)
 
-        self.choice = wx.Choice(panel, choices=self.__get_serial_ports())
+        self.choice = wx.Choice(panel, choices=self._get_serial_ports())
         self.choice.Bind(wx.EVT_CHOICE, on_select_port)
         bmp = images.Reload.GetBitmap()
         reload_button = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
@@ -172,7 +172,7 @@ class NodeMcuFlasher(wx.Frame):
             radio_button = wx.RadioButton(panel, name="baud-%d" % rate, label="%d" % rate, style=style)
             radio_button.rate = rate
             # sets default value
-            radio_button.SetValue(rate == self.__config.baud)
+            radio_button.SetValue(rate == self._config.baud)
             radio_button.Bind(wx.EVT_RADIOBUTTON, on_baud_changed)
             sizer.Add(radio_button)
             sizer.AddSpacer(10)
@@ -233,22 +233,22 @@ class NodeMcuFlasher(wx.Frame):
         hbox.Add(fgs, proportion=2, flag=wx.ALL | wx.EXPAND, border=15)
         panel.SetSizer(hbox)
 
-    def __get_serial_ports(self):
+    def _get_serial_ports(self):
         ports = [""]
         for port, desc, hwid in sorted(list_ports.comports()):
             ports.append(port)
         return ports
 
-    def __set_icons(self):
+    def _set_icons(self):
         self.SetIcon(images.Icon.GetIcon())
 
-    def __build_status_bar(self):
+    def _build_status_bar(self):
         self.statusBar = self.CreateStatusBar(2, wx.ST_SIZEGRIP)
         self.statusBar.SetStatusWidths([-2, -1])
         status_text = "Welcome to NodeMCU PyFlasher %s" % __version__
         self.statusBar.SetStatusText(status_text, 0)
 
-    def __build_menu_bar(self):
+    def _build_menu_bar(self):
         self.menuBar = wx.MenuBar()
 
         # File menu
@@ -256,22 +256,22 @@ class NodeMcuFlasher(wx.Frame):
         wx.App.SetMacExitMenuItemId(wx.ID_EXIT)
         exit_item = file_menu.Append(wx.ID_EXIT, "E&xit\tCtrl-Q", "Exit NodeMCU PyFlasher")
         exit_item.SetBitmap(images.Exit.GetBitmap())
-        self.Bind(wx.EVT_MENU, self.__on_exit_app, exit_item)
+        self.Bind(wx.EVT_MENU, self._on_exit_app, exit_item)
         self.menuBar.Append(file_menu, "&File")
 
         # Help menu
         help_menu = wx.Menu()
         help_item = help_menu.Append(wx.ID_ABOUT, '&About NodeMCU PyFlasher', 'About')
-        self.Bind(wx.EVT_MENU, self.__on_help_about, help_item)
+        self.Bind(wx.EVT_MENU, self._on_help_about, help_item)
         self.menuBar.Append(help_menu, '&Help')
 
         self.SetMenuBar(self.menuBar)
 
     # Menu methods
-    def __on_exit_app(self, event):
+    def _on_exit_app(self, event):
         self.Close(True)
 
-    def __on_help_about(self, event):
+    def _on_help_about(self, event):
         from About import MyAboutBox
         about = MyAboutBox(self)
         about.ShowModal()
@@ -286,10 +286,10 @@ class MySplashScreen(wx.SplashScreen):
         wx.SplashScreen.__init__(self, images.Splash.GetBitmap(),
                                  wx.SPLASH_CENTRE_ON_SCREEN | wx.SPLASH_TIMEOUT,
                                  2500, None, -1)
-        self.Bind(wx.EVT_CLOSE, self.__on_close)
-        self.__fc = wx.FutureCall(2000, self.__show_main)
+        self.Bind(wx.EVT_CLOSE, self._on_close)
+        self.__fc = wx.FutureCall(2000, self._show_main)
 
-    def __on_close(self, evt):
+    def _on_close(self, evt):
         # Make sure the default handler runs too so this window gets
         # destroyed
         evt.Skip()
@@ -299,9 +299,9 @@ class MySplashScreen(wx.SplashScreen):
         # main frame now
         if self.__fc.IsRunning():
             self.__fc.Stop()
-            self.__show_main()
+            self._show_main()
 
-    def __show_main(self):
+    def _show_main(self):
         frame = NodeMcuFlasher(None, "NodeMCU PyFlasher")
         frame.Show()
         if self.__fc.IsRunning():
