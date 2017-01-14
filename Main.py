@@ -12,6 +12,7 @@ from esptool import ESPROM
 from argparse import Namespace
 
 __version__ = "0.2.0"
+__supported_baud_rates__ = [9600, 57600, 74880, 115200, 230400, 460800, 921600]
 
 # ---------------------------------------------------------------------------
 
@@ -63,7 +64,7 @@ class FlashingThread(threading.Thread):
         args.no_progress = False
         args.verify = True
         args.baud = self.__config.baud
-        args.addr_filename = [[int("0x00000", 0), open(self.__config.file, 'rb')]]
+        args.addr_filename = [[int("0x00000", 0), open(self.__config.firmware_path, 'rb')]]
         # needs connect() before each operation, see  https://github.com/espressif/esptool/issues/157
         if self.__config.erase_before_flash:
             esp.connect()
@@ -81,11 +82,11 @@ class FlashConfig:
         self.baud = 115200
         self.erase_before_flash = False
         self.mode = "qio"
-        self.file = None
+        self.firmware_path = None
         self.port = None
 
     def is_complete(self):
-        return self.file is not None and self.port is not None
+        return self.firmware_path is not None and self.port is not None
 
 # ---------------------------------------------------------------------------
 
@@ -110,37 +111,54 @@ class NodeMcuFlasher(wx.Frame):
         self.Show(True)
 
     def __init_ui(self):
+        def on_reload(event):
+            self.choice.SetItems(self.__get_serial_ports())
+
+        def on_baud_changed(event):
+            radio_button = event.GetEventObject()
+
+            if radio_button.GetValue():
+                self.__config.baud = radio_button.rate
+
+        def on_mode_changed(event):
+            radio_button = event.GetEventObject()
+
+            if radio_button.GetValue():
+                self.__config.mode = radio_button.mode
+
+        def on_erase_changed(event):
+            radio_button = event.GetEventObject()
+
+            if radio_button.GetValue():
+                self.__config.erase_before_flash = radio_button.erase
+
+        def on_clicked(event):
+            self.console_ctrl.SetValue("")
+            worker = FlashingThread(self, self.__config)
+            worker.start()
+
+        def on_select_port(event):
+            choice = event.GetEventObject()
+            self.__config.port = choice.GetString(choice.GetSelection())
+
+        def on_pick_file(event):
+            self.__config.firmware_path = event.GetPath().replace("'", "")
+
         panel = wx.Panel(self)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
 
         fgs = wx.FlexGridSizer(7, 2, 10, 10)
 
-        port_label = wx.StaticText(panel, label="Serial port")
-        file_label = wx.StaticText(panel, label="NodeMCU firmware")
-        baud_label = wx.StaticText(panel, label="Baud rate")
-        flashmode_label = wx.StaticText(panel, label="Flash mode")
-        erase_label = wx.StaticText(panel, label="Erase flash")
-        console_label = wx.StaticText(panel, label="Console")
-
         self.choice = wx.Choice(panel, choices=self.__get_serial_ports())
-        self.choice.Bind(wx.EVT_CHOICE, self.__on_select_port)
+        self.choice.Bind(wx.EVT_CHOICE, on_select_port)
         bmp = images.Reload.GetBitmap()
         reload_button = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
                                         size=(bmp.GetWidth() + 7, bmp.GetHeight() + 7))
-        reload_button.Bind(wx.EVT_BUTTON, self.__on_reload)
+        reload_button.Bind(wx.EVT_BUTTON, on_reload)
 
         file_picker = wx.FilePickerCtrl(panel, style=wx.FLP_USE_TEXTCTRL)
-        file_picker.Bind(wx.EVT_FILEPICKER_CHANGED, self.__on_pick_file)
-
-        button = wx.Button(panel, -1, "Flash NodeMCU")
-        button.Bind(wx.EVT_BUTTON, self.__on_clicked)
-
-        self.console_ctrl = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
-        self.console_ctrl.SetFont(wx.Font(13, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-        self.console_ctrl.SetBackgroundColour(wx.BLACK)
-        self.console_ctrl.SetForegroundColour(wx.RED)
-        self.console_ctrl.SetDefaultStyle(wx.TextAttr(wx.RED))
+        file_picker.Bind(wx.EVT_FILEPICKER_CHANGED, on_pick_file)
 
         serial_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
         serial_boxsizer.Add(self.choice, 1,  wx.EXPAND)
@@ -148,38 +166,59 @@ class NodeMcuFlasher(wx.Frame):
         serial_boxsizer.Add(reload_button, 0, wx.ALIGN_RIGHT, 20)
 
         baud_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
-        baud_boxsizer.Add(wx.RadioButton(panel, name="baud-9600", label="9600", style=wx.RB_GROUP))
-        baud_boxsizer.AddSpacer(10)
-        baud_boxsizer.Add(wx.RadioButton(panel, name="baud-57600", label="57600"))
-        baud_boxsizer.AddSpacer(10)
-        baud_boxsizer.Add(wx.RadioButton(panel, name="baud-74880", label="74880"))
-        baud_boxsizer.AddSpacer(10)
-        radio_button_115200 = wx.RadioButton(panel, name="baud-115200", label="115200")
-        radio_button_115200.SetValue(True)  # checks/selects the control
-        baud_boxsizer.Add(radio_button_115200)
-        baud_boxsizer.AddSpacer(10)
-        baud_boxsizer.Add(wx.RadioButton(panel, name="baud-230400", label="230400"))
-        baud_boxsizer.AddSpacer(10)
-        baud_boxsizer.Add(wx.RadioButton(panel, name="baud-460800", label="460800"))
-        baud_boxsizer.AddSpacer(10)
-        baud_boxsizer.Add(wx.RadioButton(panel, name="baud-921600", label="921600"))
+
+        def add_baud_radio_button(sizer, idx, rate):
+            style = wx.RB_GROUP if idx == 0 else 0
+            radio_button = wx.RadioButton(panel, name="baud-%d" % rate, label="%d" % rate, style=style)
+            radio_button.rate = rate
+            # sets default value
+            radio_button.SetValue(rate == self.__config.baud)
+            radio_button.Bind(wx.EVT_RADIOBUTTON, on_baud_changed)
+            sizer.Add(radio_button)
+            sizer.AddSpacer(10)
+
+        for idx, rate in enumerate(__supported_baud_rates__):
+            add_baud_radio_button(baud_boxsizer, idx, rate)
 
         flashmode_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
         qio_button = wx.RadioButton(panel, name="mode-qio", label="Quad Flash I/O (qio)", style=wx.RB_GROUP)
+        qio_button.Bind(wx.EVT_RADIOBUTTON, on_mode_changed)
+        qio_button.mode = "qio"
         qio_button.SetValue(True)
+        dio_button = wx.RadioButton(panel, name="mode-dio", label="Dual Flash I/O (dio), usually for >=4MB flash chips")
+        dio_button.Bind(wx.EVT_RADIOBUTTON, on_mode_changed)
+        dio_button.mode = "dio"
         flashmode_boxsizer.Add(qio_button)
         flashmode_boxsizer.AddSpacer(10)
-        flashmode_boxsizer.Add(wx.RadioButton(panel, name="mode-dio", label="Dual Flash I/O (dio), usually for >=4MB flash chips"))
+        flashmode_boxsizer.Add(dio_button)
 
         erase_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
-        qio_button = wx.RadioButton(panel, name="erase-no", label="no", style=wx.RB_GROUP)
-        qio_button.SetValue(True)
-        erase_boxsizer.Add(qio_button)
+        erase_no_button = wx.RadioButton(panel, name="erase-no", label="no", style=wx.RB_GROUP)
+        erase_no_button.Bind(wx.EVT_RADIOBUTTON, on_erase_changed)
+        erase_no_button.erase = False
+        erase_no_button.SetValue(True)
+        erase_yes_button = wx.RadioButton(panel, name="erase-yes", label="yes, wipes all data")
+        erase_yes_button.Bind(wx.EVT_RADIOBUTTON, on_erase_changed)
+        erase_yes_button.erase = True
+        erase_boxsizer.Add(erase_no_button)
         erase_boxsizer.AddSpacer(10)
-        erase_boxsizer.Add(wx.RadioButton(panel, name="erase-yes", label="yes, wipes all data"))
+        erase_boxsizer.Add(erase_yes_button)
 
-        # handler for all radio button groups as these "light weight" groups can't accept dedicated handlers
-        self.Bind(wx.EVT_RADIOBUTTON, self.__on_radio_group)
+        button = wx.Button(panel, -1, "Flash NodeMCU")
+        button.Bind(wx.EVT_BUTTON, on_clicked)
+
+        self.console_ctrl = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+        self.console_ctrl.SetFont(wx.Font(13, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
+        self.console_ctrl.SetBackgroundColour(wx.BLACK)
+        self.console_ctrl.SetForegroundColour(wx.RED)
+        self.console_ctrl.SetDefaultStyle(wx.TextAttr(wx.RED))
+
+        port_label = wx.StaticText(panel, label="Serial port")
+        file_label = wx.StaticText(panel, label="NodeMCU firmware")
+        baud_label = wx.StaticText(panel, label="Baud rate")
+        flashmode_label = wx.StaticText(panel, label="Flash mode")
+        erase_label = wx.StaticText(panel, label="Erase flash")
+        console_label = wx.StaticText(panel, label="Console")
 
         fgs.AddMany([
                     port_label, (serial_boxsizer, 1, wx.EXPAND),
@@ -200,31 +239,6 @@ class NodeMcuFlasher(wx.Frame):
             ports.append(port)
         return ports
 
-    def __on_reload(self, event):
-        self.choice.SetItems(self.__get_serial_ports())
-
-    def __on_radio_group(self, event):
-        rb = event.GetEventObject()
-        name = rb.GetName()
-        if name.startswith("baud-"):
-            self.__config.baud = int(name[5:])
-        elif name.startswith("mode-"):
-            self.__config.mode = name[5:]
-        elif name.startswith("erase-"):
-            self.__config.erase_before_flash = name == "erase-yes"
-
-    def __on_clicked(self, event):
-        self.console_ctrl.SetValue("")
-        worker = FlashingThread(self, self.__config)
-        worker.start()
-
-    def __on_select_port(self, event):
-        choice = event.GetEventObject()
-        self.__config.port = choice.GetString(choice.GetSelection())
-
-    def __on_pick_file(self, event):
-        self.__config.file = event.GetPath().replace("'", "")
-
     def __set_icons(self):
         self.SetIcon(images.Icon.GetIcon())
 
@@ -235,21 +249,21 @@ class NodeMcuFlasher(wx.Frame):
         self.statusBar.SetStatusText(status_text, 0)
 
     def __build_menu_bar(self):
+        self.menuBar = wx.MenuBar()
 
         # File menu
-        self.menuBar = wx.MenuBar()
-        menu = wx.Menu()
+        file_menu = wx.Menu()
         wx.App.SetMacExitMenuItemId(wx.ID_EXIT)
-        exit_item = menu.Append(wx.ID_EXIT, "E&xit\tCtrl-Q", "Exit NodeMCU PyFlasher")
+        exit_item = file_menu.Append(wx.ID_EXIT, "E&xit\tCtrl-Q", "Exit NodeMCU PyFlasher")
         exit_item.SetBitmap(images.Exit.GetBitmap())
         self.Bind(wx.EVT_MENU, self.__on_exit_app, exit_item)
-        self.menuBar.Append(menu, "&File")
+        self.menuBar.Append(file_menu, "&File")
 
         # Help menu
-        menu = wx.Menu()
-        help_item = menu.Append(wx.ID_ABOUT, '&About NodeMCU PyFlasher', 'About')
+        help_menu = wx.Menu()
+        help_item = help_menu.Append(wx.ID_ABOUT, '&About NodeMCU PyFlasher', 'About')
         self.Bind(wx.EVT_MENU, self.__on_help_about, help_item)
-        self.menuBar.Append(menu, '&Help')
+        self.menuBar.Append(help_menu, '&Help')
 
         self.SetMenuBar(self.menuBar)
 
