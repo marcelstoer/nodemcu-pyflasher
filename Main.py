@@ -63,7 +63,6 @@ class FlashingThread(threading.Thread):
         args.no_progress = True
         args.verify = False
         args.compress = True
-        args.ucIsHspi = True
         args.no_stub = False
         args.baud = self._config.baud
         args.addr_filename = [[int("0x00000", 0), open(self._config.firmware_path, 'rb')]]
@@ -76,9 +75,7 @@ class FlashingThread(threading.Thread):
             #esp.connect()
             esptool.erase_flash(esp, args)
 
-
-
-            esptool.write_flash(esp, args)
+        esptool.write_flash(esp, args)
 
 
 # ---------------------------------------------------------------------------
