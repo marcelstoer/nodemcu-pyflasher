@@ -8,7 +8,7 @@ import esptool
 import threading
 import images as images
 from serial.tools import list_ports
-from esptool import ESPROM
+from esptool import ESPLoader
 from argparse import Namespace
 
 __version__ = "0.2.0"
@@ -56,21 +56,30 @@ class FlashingThread(threading.Thread):
         self._config = config
 
     def run(self):
-        esp = ESPROM(port=self._config.port)
         args = Namespace()
         args.flash_size = self._config.flashsize
         args.flash_mode = self._config.mode
         args.flash_freq = "40m"
-        args.no_progress = False
-        args.verify = True
+        args.no_progress = True
+        args.verify = False
+        args.compress = True
+        args.ucIsHspi = True
+        args.no_stub = False
         args.baud = self._config.baud
         args.addr_filename = [[int("0x00000", 0), open(self._config.firmware_path, 'rb')]]
+        esp = ESPLoader.detect_chip(self._config.port, 115200)
+        esp = esp.run_stub()
+        esp.change_baud(args.baud)
+
         # needs connect() before each operation, see  https://github.com/espressif/esptool/issues/157
         if self._config.erase_before_flash:
-            esp.connect()
+            #esp.connect()
             esptool.erase_flash(esp, args)
-        esp.connect()
-        esptool.write_flash(esp, args)
+
+
+
+            esptool.write_flash(esp, args)
+
 
 # ---------------------------------------------------------------------------
 
@@ -206,7 +215,7 @@ class NodeMcuFlasher(wx.Frame):
         detect_button.SetValue(True)
         large_button = wx.RadioButton(panel, name="flashsize-8m", label="Use 8mb flash size (for 16MB module)")
         large_button.Bind(wx.EVT_RADIOBUTTON, on_flashsize_changed)
-        large_button.flashsize = "8m"
+        large_button.flashsize = "1MB"
         flashsize_boxsizer.Add(detect_button)
         flashsize_boxsizer.AddSpacer(10)
         flashsize_boxsizer.Add(large_button)
