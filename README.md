@@ -1,7 +1,8 @@
 # NodeMCU PyFlasher
-[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/marcelstoer/nodemcu-pyflasher/blob/master/LICENSE)
+[![License](https://marcelstoer.github.io/nodemcu-pyflasher/images/mit-license-badge.svg)](https://github.com/marcelstoer/nodemcu-pyflasher/blob/master/LICENSE)
 [![Github Releases](https://img.shields.io/github/downloads/marcelstoer/nodemcu-pyflasher/total.svg?style=flat)](https://github.com/marcelstoer/nodemcu-pyflasher/releases)
-[![Twitter URL](https://img.shields.io/twitter/url/https/github.com/marcelstoer/nodemcu-pyflasher.svg?style=social)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fmarcelstoer%2Fnodemcu-pyflasher)
+[![Twitter URL](https://marcelstoer.github.io/nodemcu-pyflasher/images/twitter-badge.svg)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fmarcelstoer%2Fnodemcu-pyflasher)
+[![Facebook URL](https://marcelstoer.github.io/nodemcu-pyflasher/images/facebook-badge.svg)](https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fgithub.com%2Fmarcelstoer%2Fnodemcu-pyflasher)
 
 Self-contained [NodeMCU](https://github.com/nodemcu/nodemcu-firmware) flasher with GUI based on [esptool.py](https://github.com/espressif/esptool) and [wxPython](https://www.wxpython.org/).
 
