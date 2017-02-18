@@ -272,8 +272,8 @@ class NodeMcuFlasher(wx.Frame):
         self.Close(True)
 
     def _on_help_about(self, event):
-        from About import MyAboutBox
-        about = MyAboutBox(self)
+        from About import AboutDlg
+        about = AboutDlg(self)
         about.ShowModal()
         about.Destroy()
 

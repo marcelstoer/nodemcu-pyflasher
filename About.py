@@ -4,12 +4,13 @@
 import sys, os, wx
 import wx.html
 import wx.lib.wxpTag
+import webbrowser
 from Main import __version__
 
 # ---------------------------------------------------------------------------
 
 
-class MyAboutBox(wx.Dialog):
+class AboutDlg(wx.Dialog):
     text = '''
 <html>
 <body bgcolor="#DCDCDC" style="font-family: Arial; background-color: #DCDCDC;">
@@ -26,7 +27,7 @@ class MyAboutBox(wx.Dialog):
     <p>Fork the <a style="color: #004CE5;" href="https://github.com/marcelstoer/nodemcu-pyflasher">project on
     GitHub</a> and help improve it for all!</p>
 
-    <p>&copy; 2016-2017 Marcel St&ouml;r. Licensed under MIT.</p>
+    <p>&copy; 2017 Marcel St&ouml;r. Licensed under MIT.</p>
 
     <p>
         <wxp module="wx" class="Button">
@@ -40,22 +41,27 @@ class MyAboutBox(wx.Dialog):
 '''
 
     def __init__(self, parent):
-        wx.Dialog.__init__(self, parent, -1, "About NodeMCU PyFlasher")
-        html = wx.html.HtmlWindow(self, -1, size=(420, -1))
+        wx.Dialog.__init__(self, parent, wx.ID_ANY, "About NodeMCU PyFlasher")
+        html = HtmlWindow(self, wx.ID_ANY, size=(420, -1))
         if "gtk2" in wx.PlatformInfo or "gtk3" in wx.PlatformInfo:
             html.SetStandardFonts()
-        txt = self.text.format(self.__get_bundle_dir(), __version__)
+        txt = self.text.format(self._get_bundle_dir(), __version__)
         html.SetPage(txt)
         ir = html.GetInternalRepresentation()
         html.SetSize((ir.GetWidth() + 25, ir.GetHeight() + 25))
         self.SetClientSize(html.GetSize())
         self.CentreOnParent(wx.BOTH)
 
-    def __get_bundle_dir(self):
+    def _get_bundle_dir(self):
         # set by PyInstaller, see http://pyinstaller.readthedocs.io/en/v3.2/runtime-information.html
         if getattr(sys, 'frozen', False):
             return sys._MEIPASS
         else:
             return os.path.dirname(os.path.abspath(__file__))
+
+
+class HtmlWindow(wx.html.HtmlWindow):
+    def OnLinkClicked(self, link):
+        webbrowser.open(link.GetHref())
 
 # ---------------------------------------------------------------------------
