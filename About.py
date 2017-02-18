@@ -15,10 +15,10 @@ class AboutDlg(wx.Dialog):
 <html>
 <body bgcolor="#DCDCDC" style="font-family: Arial; background-color: #DCDCDC;">
 <center>
-    <img src="{0}/images/python-256.png" width="64" height="64" alt="Python">
-    <img src="{0}/images/icon-256.png" width="64" height="64" alt="NodeMCU">
-    <img src="{0}/images/espressif-256.png" width="64" height="64" alt="Espressif, producers of ESP8266 et.al.">
-    <img src="{0}/images/wxpython-256.png" width="64" height="43" alt="wxPython, cross-platform GUI framework">
+    <img src="{0}/images/python-64.png" width="64" height="64" alt="Python">
+    <img src="{0}/images/icon-64.png" width="64" height="64" alt="NodeMCU">
+    <img src="{0}/images/espressif-64.png" width="64" height="64" alt="Espressif, producers of ESP8266 et.al.">
+    <img src="{0}/images/wxpython-64.png" width="64" height="43" alt="wxPython, cross-platform GUI framework">
 
     <h1>NodeMCU PyFlasher</h1>
 
