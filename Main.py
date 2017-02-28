@@ -3,9 +3,10 @@
 import wx
 import wx.lib.inspection
 import wx.lib.mixins.inspection
-import sys
+import sys, os
 import esptool
 import threading
+import json
 import images as images
 from serial.tools import list_ports
 from esptool import ESPROM
@@ -85,6 +86,28 @@ class FlashConfig:
         self.firmware_path = None
         self.port = None
 
+    @classmethod
+    def load(cls, file_path):
+        conf = cls()
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+            conf.port = data['port']
+            conf.baud = data['baud']
+            conf.mode = data['mode']
+            conf.erase_before_flash = data['erase']
+        return conf
+
+    def safe(self, file_path):
+        data = {
+            'port': self.port,
+            'baud': self.baud,
+            'mode': self.mode,
+            'erase': self.erase_before_flash,
+        }
+        with open(file_path, 'w') as f:
+            json.dump(data, f)
+
     def is_complete(self):
         return self.firmware_path is not None and self.port is not None
 
@@ -97,7 +120,7 @@ class NodeMcuFlasher(wx.Frame):
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, -1, title, size=(700, 650),
                           style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
-        self._config = FlashConfig()
+        self._config = FlashConfig.load(self._get_config_file_path())
 
         self._build_status_bar()
         self._set_icons()
@@ -152,6 +175,7 @@ class NodeMcuFlasher(wx.Frame):
 
         self.choice = wx.Choice(panel, choices=self._get_serial_ports())
         self.choice.Bind(wx.EVT_CHOICE, on_select_port)
+        self._select_configured_port()
         bmp = images.Reload.GetBitmap()
         reload_button = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
                                         size=(bmp.GetWidth() + 7, bmp.GetHeight() + 7))
@@ -181,28 +205,33 @@ class NodeMcuFlasher(wx.Frame):
             add_baud_radio_button(baud_boxsizer, idx, rate)
 
         flashmode_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
-        qio_button = wx.RadioButton(panel, name="mode-qio", label="Quad Flash I/O (qio)", style=wx.RB_GROUP)
-        qio_button.Bind(wx.EVT_RADIOBUTTON, on_mode_changed)
-        qio_button.mode = "qio"
-        qio_button.SetValue(True)
-        dio_button = wx.RadioButton(panel, name="mode-dio", label="Dual Flash I/O (dio), usually for >=4MB flash chips")
-        dio_button.Bind(wx.EVT_RADIOBUTTON, on_mode_changed)
-        dio_button.mode = "dio"
-        flashmode_boxsizer.Add(qio_button)
-        flashmode_boxsizer.AddSpacer(10)
-        flashmode_boxsizer.Add(dio_button)
+
+        def add_flash_mode_radio_button(sizer, idx, mode, label):
+            style = wx.RB_GROUP if idx == 0 else 0
+            radio_button = wx.RadioButton(panel, name="mode-%s" % mode, label="%s" % label, style=style)
+            radio_button.Bind(wx.EVT_RADIOBUTTON, on_mode_changed)
+            radio_button.mode = mode
+            radio_button.SetValue(mode == self._config.mode)
+            sizer.Add(radio_button)
+            sizer.AddSpacer(10)
+
+        add_flash_mode_radio_button(flashmode_boxsizer, 0, "qio", "Quad Flash I/O (qio)")
+        add_flash_mode_radio_button(flashmode_boxsizer, 1, "dio", "Dual Flash I/O (dio), usually for >=4MB flash chips")
 
         erase_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
-        erase_no_button = wx.RadioButton(panel, name="erase-no", label="no", style=wx.RB_GROUP)
-        erase_no_button.Bind(wx.EVT_RADIOBUTTON, on_erase_changed)
-        erase_no_button.erase = False
-        erase_no_button.SetValue(True)
-        erase_yes_button = wx.RadioButton(panel, name="erase-yes", label="yes, wipes all data")
-        erase_yes_button.Bind(wx.EVT_RADIOBUTTON, on_erase_changed)
-        erase_yes_button.erase = True
-        erase_boxsizer.Add(erase_no_button)
-        erase_boxsizer.AddSpacer(10)
-        erase_boxsizer.Add(erase_yes_button)
+
+        def add_erase_radio_button(sizer, idx, erase_before_flash, label, value):
+            style = wx.RB_GROUP if idx == 0 else 0
+            radio_button = wx.RadioButton(panel, name="erase-%s" % erase_before_flash, label="%s" % label, style=style)
+            radio_button.Bind(wx.EVT_RADIOBUTTON, on_erase_changed)
+            radio_button.erase = erase_before_flash
+            radio_button.SetValue(value)
+            sizer.Add(radio_button)
+            sizer.AddSpacer(10)
+
+        erase = self._config.erase_before_flash
+        add_erase_radio_button(erase_boxsizer, 0, False, "no", erase is False)
+        add_erase_radio_button(erase_boxsizer, 1, True, "yes, wipes all data", erase is True)
 
         button = wx.Button(panel, -1, "Flash NodeMCU")
         button.Bind(wx.EVT_BUTTON, on_clicked)
@@ -232,6 +261,14 @@ class NodeMcuFlasher(wx.Frame):
         fgs.AddGrowableCol(1, 1)
         hbox.Add(fgs, proportion=2, flag=wx.ALL | wx.EXPAND, border=15)
         panel.SetSizer(hbox)
+
+    def _select_configured_port(self):
+        count = 0
+        for item in self.choice.GetItems():
+            if item == self._config.port:
+                self.choice.Select(count)
+                break
+            count += 1
 
     def _get_serial_ports(self):
         ports = [""]
@@ -267,8 +304,12 @@ class NodeMcuFlasher(wx.Frame):
 
         self.SetMenuBar(self.menuBar)
 
+    def _get_config_file_path(self):
+        return wx.StandardPaths.Get().GetUserConfigDir() + "/nodemcu-pyflasher.json"
+
     # Menu methods
     def _on_exit_app(self, event):
+        self._config.safe(self._get_config_file_path())
         self.Close(True)
 
     def _on_help_about(self, event):
