@@ -12,7 +12,7 @@ from serial.tools import list_ports
 from esptool import ESPROM
 from argparse import Namespace
 
-__version__ = "0.2.0"
+__version__ = "1.0.0"
 __supported_baud_rates__ = [9600, 57600, 74880, 115200, 230400, 460800, 921600]
 
 # ---------------------------------------------------------------------------
