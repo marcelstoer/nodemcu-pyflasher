@@ -1,6 +1,7 @@
 # NodeMCU PyFlasher
 [![License](https://marcelstoer.github.io/nodemcu-pyflasher/images/mit-license-badge.svg)](https://github.com/marcelstoer/nodemcu-pyflasher/blob/master/LICENSE)
 [![Github Releases](https://img.shields.io/github/downloads/marcelstoer/nodemcu-pyflasher/total.svg?style=flat)](https://github.com/marcelstoer/nodemcu-pyflasher/releases)
+[![License](https://marcelstoer.github.io/nodemcu-pyflasher/images/donate-paypal-badge.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=HFN4ZMET5XS2Q)
 [![Twitter URL](https://marcelstoer.github.io/nodemcu-pyflasher/images/twitter-badge.svg)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fmarcelstoer%2Fnodemcu-pyflasher)
 [![Facebook URL](https://marcelstoer.github.io/nodemcu-pyflasher/images/facebook-badge.svg)](https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fgithub.com%2Fmarcelstoer%2Fnodemcu-pyflasher)
 
