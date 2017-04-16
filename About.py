@@ -27,6 +27,11 @@ class AboutDlg(wx.Dialog):
     <p>Fork the <a style="color: #004CE5;" href="https://github.com/marcelstoer/nodemcu-pyflasher">project on
     GitHub</a> and help improve it for all!</p>
 
+    <p>
+    As with everything I offer for free, this is donation-ware.
+    <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=HFN4ZMET5XS2Q"><img src="{0}/images/paypal-256.png" width="256" height="88" alt="Donate with PayPal"></a>
+    </p>
+
     <p>&copy; 2017 Marcel St&ouml;r. Licensed under MIT.</p>
 
     <p>
