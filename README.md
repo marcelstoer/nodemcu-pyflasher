@@ -19,6 +19,14 @@ Scan the [list of open issues](https://github.com/marcelstoer/nodemcu-pyflasher/
 
 This is my first Python project. If you have constructive feedback as for how to improve the code please do reach out to me.
 
+## Getting help
+In the unlikely event that you're stuck with this simple tool the best way to get help is to turn to the ["Tools and IDE" subforum on esp8266.com](http://www.esp8266.com/viewforum.php?f=22).
+
+## Donationware
+All open-source development by the author is donationware. Show your love and support for open-source development by donating to the good cause through PayPal.
+
+[![PayPal Donations](./images/paypal-256.png)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=HFN4ZMET5XS2Q)
+
 ## Why this project exists
 
 ### Motivation
