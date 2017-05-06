@@ -9,7 +9,7 @@ import threading
 import json
 import images as images
 from serial.tools import list_ports
-from esptool import ESPROM
+from esptool import ESPLoader
 from argparse import Namespace
 
 __version__ = "1.0.1"
@@ -57,21 +57,27 @@ class FlashingThread(threading.Thread):
         self._config = config
 
     def run(self):
-        esp = ESPROM(port=self._config.port)
         args = Namespace()
-        args.flash_size = "detect"
+        args.flash_size = self._config.flashsize
         args.flash_mode = self._config.mode
         args.flash_freq = "40m"
-        args.no_progress = False
-        args.verify = True
+        args.no_progress = True
+        args.verify = False
+        args.compress = True
+        args.no_stub = False
         args.baud = self._config.baud
         args.addr_filename = [[int("0x00000", 0), open(self._config.firmware_path, 'rb')]]
+        esp = ESPLoader.detect_chip(self._config.port, 115200)
+        esp = esp.run_stub()
+        esp.change_baud(args.baud)
+
         # needs connect() before each operation, see  https://github.com/espressif/esptool/issues/157
         if self._config.erase_before_flash:
-            esp.connect()
+            #esp.connect()
             esptool.erase_flash(esp, args)
-        esp.connect()
+
         esptool.write_flash(esp, args)
+
 
 # ---------------------------------------------------------------------------
 
@@ -83,6 +89,7 @@ class FlashConfig:
         self.baud = 115200
         self.erase_before_flash = False
         self.mode = "qio"
+        self.flashsize = "detect"
         self.firmware_path = None
         self.port = None
 
@@ -149,6 +156,12 @@ class NodeMcuFlasher(wx.Frame):
             if radio_button.GetValue():
                 self._config.mode = radio_button.mode
 
+        def on_flashsize_changed(event):
+            radio_button = event.GetEventObject()
+
+            if radio_button.GetValue():
+                self._config.flashsize = radio_button.flashsize
+
         def on_erase_changed(event):
             radio_button = event.GetEventObject()
 
@@ -171,7 +184,7 @@ class NodeMcuFlasher(wx.Frame):
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
 
-        fgs = wx.FlexGridSizer(7, 2, 10, 10)
+        fgs = wx.FlexGridSizer(8, 2, 10, 10)
 
         self.choice = wx.Choice(panel, choices=self._get_serial_ports())
         self.choice.Bind(wx.EVT_CHOICE, on_select_port)
@@ -218,6 +231,18 @@ class NodeMcuFlasher(wx.Frame):
         add_flash_mode_radio_button(flashmode_boxsizer, 0, "qio", "Quad Flash I/O (qio)")
         add_flash_mode_radio_button(flashmode_boxsizer, 1, "dio", "Dual Flash I/O (dio), usually for >=4MB flash chips")
 
+        flashsize_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
+        detect_button = wx.RadioButton(panel, name="flashsize-detect", label="Autodetect flash size", style=wx.RB_GROUP)
+        detect_button.Bind(wx.EVT_RADIOBUTTON, on_flashsize_changed)
+        detect_button.flashsize = "detect"
+        detect_button.SetValue(True)
+        large_button = wx.RadioButton(panel, name="flashsize-8m", label="Use 8mb flash size (for 16MB module)")
+        large_button.Bind(wx.EVT_RADIOBUTTON, on_flashsize_changed)
+        large_button.flashsize = "1MB"
+        flashsize_boxsizer.Add(detect_button)
+        flashsize_boxsizer.AddSpacer(10)
+        flashsize_boxsizer.Add(large_button)
+
         erase_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
 
         def add_erase_radio_button(sizer, idx, erase_before_flash, label, value):
@@ -246,6 +271,7 @@ class NodeMcuFlasher(wx.Frame):
         file_label = wx.StaticText(panel, label="NodeMCU firmware")
         baud_label = wx.StaticText(panel, label="Baud rate")
         flashmode_label = wx.StaticText(panel, label="Flash mode")
+        flashsize_label = wx.StaticText(panel, label="Flash size")
         erase_label = wx.StaticText(panel, label="Erase flash")
         console_label = wx.StaticText(panel, label="Console")
 
@@ -254,10 +280,11 @@ class NodeMcuFlasher(wx.Frame):
                     file_label, (file_picker, 1, wx.EXPAND),
                     baud_label, baud_boxsizer,
                     flashmode_label, flashmode_boxsizer,
+                    flashsize_label, flashsize_boxsizer,
                     erase_label, erase_boxsizer,
                     (wx.StaticText(panel, label="")), (button, 1, wx.EXPAND),
                     (console_label, 1, wx.EXPAND), (self.console_ctrl, 1, wx.EXPAND)])
-        fgs.AddGrowableRow(6, 1)
+        fgs.AddGrowableRow(7, 1)
         fgs.AddGrowableCol(1, 1)
         hbox.Add(fgs, proportion=2, flag=wx.ALL | wx.EXPAND, border=15)
         panel.SetSizer(hbox)
