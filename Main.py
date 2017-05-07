@@ -8,6 +8,7 @@ import esptool
 import threading
 import json
 import images as images
+from serial import SerialException
 from serial.tools import list_ports
 from esptool import ESPROM
 from argparse import Namespace
@@ -57,7 +58,11 @@ class FlashingThread(threading.Thread):
         self._config = config
 
     def run(self):
-        esp = ESPROM(port=self._config.port)
+        try:
+            esp = ESPROM(port=self._config.port)
+        except SerialException as e:
+            self._parent.report_error(e.strerror)
+            raise e
         args = Namespace()
         args.flash_size = "detect"
         args.flash_mode = self._config.mode
@@ -317,6 +322,9 @@ class NodeMcuFlasher(wx.Frame):
         about = AboutDlg(self)
         about.ShowModal()
         about.Destroy()
+
+    def report_error(self, message):
+        self.console_ctrl.SetValue(message)
 
 # ---------------------------------------------------------------------------
 
