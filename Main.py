@@ -10,10 +10,11 @@ import json
 import images as images
 from serial import SerialException
 from serial.tools import list_ports
-from esptool import ESPROM
+from esptool import ESPLoader
+from esptool import NotImplementedInROMError
 from argparse import Namespace
 
-__version__ = "1.0.1"
+__version__ = "2.0-beta"
 __supported_baud_rates__ = [9600, 57600, 74880, 115200, 230400, 460800, 921600]
 
 # ---------------------------------------------------------------------------
@@ -23,25 +24,17 @@ __supported_baud_rates__ = [9600, 57600, 74880, 115200, 230400, 460800, 921600]
 class RedirectText:
     def __init__(self, text_ctrl):
         self.__out = text_ctrl
-        self.__pending_backspaces = 0
 
     def write(self, string):
-        new_string = ""
-        number_of_backspaces = 0
-        for c in string:
-            if c == "\b":
-                number_of_backspaces += 1
-            else:
-                new_string += c
-
-        if self.__pending_backspaces > 0:
-            # current value minus pending backspaces plus new string
-            new_value = self.__out.GetValue()[:-1 * self.__pending_backspaces] + new_string
+        if string.startswith("\r"):
+            # carriage return -> remove last line i.e. reset position to start of last line
+            current_value = self.__out.GetValue()
+            last_newline = current_value.rfind("\n")
+            new_value = current_value[:last_newline + 1]  # preserve \n
+            new_value += string[1:]  # chop off leading \r
             wx.CallAfter(self.__out.SetValue, new_value)
         else:
-            wx.CallAfter(self.__out.AppendText, new_string)
-
-        self.__pending_backspaces = number_of_backspaces
+            wx.CallAfter(self.__out.AppendText, string)
 
     def flush(self):
         None
@@ -59,24 +52,34 @@ class FlashingThread(threading.Thread):
 
     def run(self):
         try:
-            esp = ESPROM(port=self._config.port)
+            initial_baud = min(ESPLoader.ESP_ROM_BAUD, self._config.baud)
+            esp = ESPLoader.detect_chip(self._config.port, initial_baud)
+            esp = esp.run_stub()
+            if self._config.baud > initial_baud:
+                try:
+                    esp.change_baud(self._config.baud)
+                except NotImplementedInROMError:
+                    print("WARNING: ROM doesn't support changing baud rate. Keeping initial baud rate %d" % initial_baud)
+
+            args = Namespace()
+            args.flash_size = "detect"
+            args.flash_mode = self._config.mode
+            args.flash_freq = "40m"
+            args.no_progress = False
+            args.no_stub = False
+            args.verify = False  # TRUE is deprecated
+            args.compress = True
+            args.addr_filename = [[int("0x00000", 0),    open(self._config.firmware_path, 'rb')]]
+
+            if self._config.erase_before_flash:
+                esptool.erase_flash(esp, args)
+            esptool.write_flash(esp, args)
+
+            self._parent.log_message("Hard resetting...")  # replicate behavior from esptool.py:2111
+            esp.hard_reset()
         except SerialException as e:
             self._parent.report_error(e.strerror)
             raise e
-        args = Namespace()
-        args.flash_size = "detect"
-        args.flash_mode = self._config.mode
-        args.flash_freq = "40m"
-        args.no_progress = False
-        args.verify = True
-        args.baud = self._config.baud
-        args.addr_filename = [[int("0x00000", 0), open(self._config.firmware_path, 'rb')]]
-        # needs connect() before each operation, see  https://github.com/espressif/esptool/issues/157
-        if self._config.erase_before_flash:
-            esp.connect()
-            esptool.erase_flash(esp, args)
-        esp.connect()
-        esptool.write_flash(esp, args)
 
 # ---------------------------------------------------------------------------
 
@@ -325,6 +328,9 @@ class NodeMcuFlasher(wx.Frame):
 
     def report_error(self, message):
         self.console_ctrl.SetValue(message)
+
+    def log_message(self, message):
+        self.console_ctrl.AppendText(message)
 
 # ---------------------------------------------------------------------------
 
