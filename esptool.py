@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/local/opt/python/bin/python2.7
 #
 # ESP8266 & ESP32 ROM Bootloader Utility
 # Copyright (C) 2014-2016 Fredrik Ahlberg, Angus Gratton, Espressif Systems (Shanghai) PTE LTD, other contributors as noted.
@@ -30,10 +30,19 @@ import base64
 import zlib
 import shlex
 
-__version__ = "2.0-beta3"
+__version__ = "2.0"
 
 MAX_UINT32 = 0xffffffff
 MAX_UINT24 = 0xffffff
+
+DEFAULT_TIMEOUT = 3       # timeout for most flash operations
+START_FLASH_TIMEOUT = 20  # timeout for starting flash (may perform erase)
+CHIP_ERASE_TIMEOUT = 120  # timeout for full chip erase
+SYNC_TIMEOUT = 0.1        # timeout for syncing with bootloader
+
+
+DETECTED_FLASH_SIZES = {0x12: '256KB', 0x13: '512KB', 0x14: '1MB',
+                        0x15: '2MB', 0x16: '4MB', 0x17: '8MB', 0x18: '16MB'}
 
 
 def check_supported_function(func, check_func):
@@ -169,7 +178,13 @@ class ESPLoader(object):
         # CH341 driver on some Linux versions (this opens at 9600 then
         # sets), shouldn't matter for other platforms/drivers. See
         # https://github.com/espressif/esptool/issues/44#issuecomment-107094446
-        self._port.baudrate = baud
+        self._set_port_baudrate(baud)
+
+    def _set_port_baudrate(self, baud):
+        try:
+            self._port.baudrate = baud
+        except IOError:
+            raise FatalError("Failed to set baud rate %d. The driver may not support this rate." % baud)
 
     @staticmethod
     def detect_chip(port=DEFAULT_PORT, baud=ESP_ROM_BAUD, connect_mode='default_reset'):
@@ -319,13 +334,13 @@ class ESPLoader(object):
             time.sleep(0.05)
             self._port.setDTR(False)  # IO0=HIGH, done
 
-        self._port.timeout = 0.1
+        self._port.timeout = SYNC_TIMEOUT
         for _ in range(5):
             try:
                 self.flush_input()
                 self._port.flushOutput()
                 self.sync()
-                self._port.timeout = 5
+                self._port.timeout = DEFAULT_TIMEOUT
                 return None
             except FatalError as e:
                 if esp32r0_delay:
@@ -391,17 +406,16 @@ class ESPLoader(object):
     Returns number of blocks (of size self.FLASH_WRITE_SIZE) to write.
     """
     def flash_begin(self, size, offset):
-        old_tmo = self._port.timeout
         num_blocks = (size + self.FLASH_WRITE_SIZE - 1) // self.FLASH_WRITE_SIZE
         erase_size = self.get_erase_size(offset, size)
 
-        self._port.timeout = 20
+        self._port.timeout = START_FLASH_TIMEOUT
         t = time.time()
         self.check_command("enter Flash download mode", self.ESP_FLASH_BEGIN,
                            struct.pack('<IIII', erase_size, num_blocks, self.FLASH_WRITE_SIZE, offset))
         if size != 0 and not self.IS_STUB:
             print("Took %.2fs to erase flash block" % (time.time() - t))
-        self._port.timeout = old_tmo
+        self._port.timeout = DEFAULT_TIMEOUT
         return num_blocks
 
     """ Write block to flash """
@@ -468,11 +482,10 @@ class ESPLoader(object):
 
         Returns number of blocks (size self.FLASH_WRITE_SIZE) to write.
         """
-        old_tmo = self._port.timeout
         num_blocks = (compsize + self.FLASH_WRITE_SIZE - 1) // self.FLASH_WRITE_SIZE
         erase_blocks = (size + self.FLASH_WRITE_SIZE - 1) // self.FLASH_WRITE_SIZE
 
-        self._port.timeout = 20
+        self._port.timeout = START_FLASH_TIMEOUT
         t = time.time()
         if self.IS_STUB:
             write_size = size  # stub expects number of bytes here, manages erasing internally
@@ -484,7 +497,7 @@ class ESPLoader(object):
         if size != 0 and not self.IS_STUB:
             # (stub erases as it writes, but ROM loaders erase on begin)
             print("Took %.2fs to erase flash block" % (time.time() - t))
-        self._port.timeout = old_tmo
+        self._port.timeout = DEFAULT_TIMEOUT
         return num_blocks
 
     """ Write block to flash, send compressed """
@@ -522,19 +535,18 @@ class ESPLoader(object):
         print("Changing baud rate to %d" % baud)
         self.command(self.ESP_CHANGE_BAUDRATE, struct.pack('<II', baud, 0))
         print("Changed.")
-        self._port.baudrate = baud
+        self._set_port_baudrate(baud)
         time.sleep(0.05)  # get rid of crap sent during baud rate change
         self.flush_input()
 
     @stub_function_only
     def erase_flash(self):
-        oldtimeout = self._port.timeout
         # depending on flash chip model the erase may take this long (maybe longer!)
-        self._port.timeout = 128
+        self._port.timeout = CHIP_ERASE_TIMEOUT
         try:
             self.check_command("erase flash", self.ESP_ERASE_FLASH)
         finally:
-            self._port.timeout = oldtimeout
+            self._port.timeout = DEFAULT_TIMEOUT
 
     @stub_function_only
     def erase_region(self, offset, size):
@@ -814,7 +826,10 @@ class ESP8266ROM(ESPLoader):
         '16MB':0x90,
     }
 
-    FLASH_HEADER_OFFSET = 0
+    BOOTLOADER_FLASH_OFFSET = 0
+
+    def get_chip_description(self):
+        return "ESP8266"
 
     def flash_spi_attach(self, hspi_arg):
         if self.IS_STUB:
@@ -918,7 +933,25 @@ class ESP32ROM(ESPLoader):
         '16MB':0x40
     }
 
-    FLASH_HEADER_OFFSET = 0x1000
+    BOOTLOADER_FLASH_OFFSET = 0x1000
+
+    def get_chip_description(self):
+        blk3 = self.read_efuse(3)
+        chip_version = (blk3 >> 12) & 0xF
+        pkg_version = (blk3 >> 9) & 0x07
+
+        silicon_rev = {
+            0: "0",
+            8: "1"
+        }.get(chip_version, "(unknown 0x%x)" % chip_version)
+
+        chip_name = {
+            0: "ESP32D0WDQ6",
+            1: "ESP32D0WDQ5",
+            2: "ESP32D2WDQ5",
+        }.get(pkg_version, "unknown ESP32")
+
+        return "%s (revision %s)" % (chip_name, silicon_rev)
 
     def read_efuse(self, n):
         """ Read the nth word of the ESP3x EFUSE region. """
@@ -1581,7 +1614,7 @@ def detect_flash_size(esp, args):
     if args.flash_size == 'detect':
         flash_id = esp.flash_id()
         size_id = flash_id >> 16
-        args.flash_size = {0x12: '256KB', 0x13: '512KB', 0x14: '1MB', 0x15: '2MB', 0x16: '4MB', 0x17: '8MB', 0x18: '16MB'}.get(size_id)
+        args.flash_size = DETECTED_FLASH_SIZES.get(size_id)
         if args.flash_size is None:
             print('Warning: Could not auto-detect Flash size (FlashID=0x%x, SizeID=0x%x), defaulting to 4MB' % (flash_id, size_id))
             args.flash_size = '4MB'
@@ -1589,27 +1622,35 @@ def detect_flash_size(esp, args):
             print('Auto-detected Flash size:', args.flash_size)
 
 
-def _get_flash_params(esp, args):
-    """ Return binary flash parameters (bitstring length 2) for args """
-    detect_flash_size(esp, args)
+def _update_image_flash_params(esp, address, args, image):
+    """ Modify the flash mode & size bytes if this looks like an executable bootloader image  """
+    if len(image) < 8:
+        return image  # not long enough to be a bootloader image
 
-    flash_mode = {'qio':0, 'qout':1, 'dio':2, 'dout': 3}[args.flash_mode]
-    flash_size_freq = esp.parse_flash_size_arg(args.flash_size)
-    flash_size_freq += {'40m':0, '26m':1, '20m':2, '80m': 0xf}[args.flash_freq]
-    return struct.pack(b'BB', flash_mode, flash_size_freq)
+    # unpack the (potential) image header
+    magic, _, flash_mode, flash_size_freq = struct.unpack("BBBB", image[:4])
+    if address != esp.BOOTLOADER_FLASH_OFFSET or magic != esp.ESP_IMAGE_MAGIC:
+        return image  # not flashing a bootloader, so don't modify this
 
+    if args.flash_mode != 'keep':
+        flash_mode = {'qio':0, 'qout':1, 'dio':2, 'dout': 3}[args.flash_mode]
 
-def _update_image_flash_params(esp, address, flash_params, image):
-    """ Modify the flash mode & size bytes if this looks like an executable image """
-    if address == esp.FLASH_HEADER_OFFSET and (image[0] == '\xe9' or image[0] == 0xE9):  # python 2/3 compat:
+    flash_freq = flash_size_freq & 0x0F
+    if args.flash_freq != 'keep':
+        flash_freq = {'40m':0, '26m':1, '20m':2, '80m': 0xf}[args.flash_freq]
+
+    flash_size = flash_size_freq & 0xF0
+    if args.flash_size != 'keep':
+        flash_size = esp.parse_flash_size_arg(args.flash_size)
+
+    flash_params = struct.pack(b'BB', flash_mode, flash_size + flash_freq)
+    if flash_params != image[2:4]:
         print('Flash params set to 0x%04x' % struct.unpack(">H", flash_params))
         image = image[0:2] + flash_params + image[4:]
     return image
 
 
 def write_flash(esp, args):
-    flash_params = _get_flash_params(esp, args)
-
     # set args.compress based on default behaviour:
     # -> if either --compress or --no-compress is set, honour that
     # -> otherwise, set --compress unless --no-stub is set
@@ -1630,19 +1671,23 @@ def write_flash(esp, args):
         if args.no_stub:
             print('Erasing flash...')
         image = pad_to(argfile.read(), 4)
-        image = _update_image_flash_params(esp, address, flash_params, image)
+        image = _update_image_flash_params(esp, address, args, image)
         calcmd5 = hashlib.md5(image).hexdigest()
         uncsize = len(image)
         if args.compress:
             uncimage = image
             image = zlib.compress(uncimage, 9)
+            ratio = uncsize / len(image)
             blocks = esp.flash_defl_begin(uncsize, len(image), address)
         else:
+            ratio = 1.0
             blocks = esp.flash_begin(uncsize, address)
         argfile.seek(0)  # in case we need it again
         seq = 0
         written = 0
         t = time.time()
+        esp._port.timeout = min(DEFAULT_TIMEOUT * ratio,
+                                CHIP_ERASE_TIMEOUT * 2)
         while len(image) > 0:
             print('\rWriting at 0x%08x... (%d %%)' % (address + seq * esp.FLASH_WRITE_SIZE, 100 * (seq + 1) // blocks), end='')
             sys.stdout.flush()
@@ -1677,6 +1722,8 @@ def write_flash(esp, args):
                 print('Hash of data verified.')
         except NotImplementedInROMError:
             pass
+        esp._port.timeout = DEFAULT_TIMEOUT
+
     print('\nLeaving...')
 
     if esp.IS_STUB:
@@ -1691,7 +1738,7 @@ def write_flash(esp, args):
     if args.verify:
         print('Verifying just-written flash...')
         print('(This option is deprecated, flash contents are now always read back after flashing.)')
-        _verify_flash(esp, args)
+        verify_flash(esp, args)
 
 
 def image_info(args):
@@ -1779,7 +1826,9 @@ def run(esp, args):
 def flash_id(esp, args):
     flash_id = esp.flash_id()
     print('Manufacturer: %02x' % (flash_id & 0xff))
-    print('Device: %02x%02x' % ((flash_id >> 8) & 0xff, (flash_id >> 16) & 0xff))
+    flid_lowbyte = (flash_id >> 16) & 0xFF
+    print('Device: %02x%02x' % ((flash_id >> 8) & 0xff, flid_lowbyte))
+    print('Detected flash size: %s' % (DETECTED_FLASH_SIZES.get(flid_lowbyte, "Unknown")))
 
 
 def read_flash(esp, args):
@@ -1801,19 +1850,14 @@ def read_flash(esp, args):
     open(args.filename, 'wb').write(data)
 
 
-def verify_flash(esp, args, flash_params=None):
-    _verify_flash(esp, args)
-
-
-def _verify_flash(esp, args):
+def verify_flash(esp, args):
     differences = False
-    flash_params = _get_flash_params(esp, args)
 
     for address, argfile in args.addr_filename:
         image = pad_to(argfile.read(), 4)
         argfile.seek(0)  # rewind in case we need it again
 
-        image = _update_image_flash_params(esp, address, flash_params, image)
+        image = _update_image_flash_params(esp, address, args, image)
 
         image_size = len(image)
         print('Verifying 0x%x (%d) bytes @ 0x%08x in flash against %s...' % (image_size, image_size, address, argfile.name))
@@ -1934,14 +1978,17 @@ def main():
     parser_write_mem.add_argument('value', help='Value', type=arg_auto_int)
     parser_write_mem.add_argument('mask', help='Mask of bits to write', type=arg_auto_int)
 
-    def add_spi_flash_subparsers(parent, auto_detect=False):
+    def add_spi_flash_subparsers(parent, is_elf2image):
         """ Add common parser arguments for SPI flash properties """
+        extra_keep_args = [] if is_elf2image else ['keep']
+        auto_detect = not is_elf2image
+
         parent.add_argument('--flash_freq', '-ff', help='SPI Flash frequency',
-                            choices=['40m', '26m', '20m', '80m'],
-                            default=os.environ.get('ESPTOOL_FF', '40m'))
+                            choices=extra_keep_args + ['40m', '26m', '20m', '80m'],
+                            default=os.environ.get('ESPTOOL_FF', '40m' if is_elf2image else 'keep'))
         parent.add_argument('--flash_mode', '-fm', help='SPI Flash mode',
-                            choices=['qio', 'qout', 'dio', 'dout'],
-                            default=os.environ.get('ESPTOOL_FM', 'qio'))
+                            choices=extra_keep_args + ['qio', 'qout', 'dio', 'dout'],
+                            default=os.environ.get('ESPTOOL_FM', 'qio' if is_elf2image else 'keep'))
         parent.add_argument('--flash_size', '-fs', help='SPI Flash size in MegaBytes (1MB, 2MB, 4MB, 8MB, 16M)'
                             ' plus ESP8266-only (256KB, 512KB, 2MB-c1, 4MB-c1)',
                             action=FlashSizeAction, auto_detect=auto_detect,
@@ -1953,7 +2000,7 @@ def main():
         help='Write a binary blob to flash')
     parser_write_flash.add_argument('addr_filename', metavar='<address> <filename>', help='Address followed by binary filename, separated by space',
                                     action=AddrFilenamePairAction)
-    add_spi_flash_subparsers(parser_write_flash, auto_detect=True)
+    add_spi_flash_subparsers(parser_write_flash, is_elf2image=False)
     parser_write_flash.add_argument('--no-progress', '-p', help='Suppress progress output', action="store_true")
     parser_write_flash.add_argument('--verify', help='Verify just-written data on flash ' +
                                     '(mostly superfluous, data is read back during flashing)', action='store_true')
@@ -1985,7 +2032,7 @@ def main():
     parser_elf2image.add_argument('--output', '-o', help='Output filename prefix (for version 1 image), or filename (for version 2 single image)', type=str)
     parser_elf2image.add_argument('--version', '-e', help='Output image version', choices=['1','2'], default='1')
 
-    add_spi_flash_subparsers(parser_elf2image)
+    add_spi_flash_subparsers(parser_elf2image, is_elf2image=True)
 
     subparsers.add_parser(
         'read_mac',
@@ -2032,7 +2079,7 @@ def main():
                                      action=AddrFilenamePairAction)
     parser_verify_flash.add_argument('--diff', '-d', help='Show differences',
                                      choices=['no', 'yes'], default='no')
-    add_spi_flash_subparsers(parser_verify_flash, auto_detect=True)
+    add_spi_flash_subparsers(parser_verify_flash, is_elf2image=False)
 
     parser_erase_flash = subparsers.add_parser(
         'erase_flash',
@@ -2079,6 +2126,8 @@ def main():
             }[args.chip]
             esp = chip_class(args.port, initial_baud)
             esp.connect(args.before)
+
+        print("Chip is %s" % (esp.get_chip_description()))
 
         if not args.no_stub:
             esp = esp.run_stub()

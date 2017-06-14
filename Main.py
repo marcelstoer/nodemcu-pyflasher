@@ -53,8 +53,12 @@ class FlashingThread(threading.Thread):
     def run(self):
         try:
             initial_baud = min(ESPLoader.ESP_ROM_BAUD, self._config.baud)
+
             esp = ESPLoader.detect_chip(self._config.port, initial_baud)
+            print("Chip is %s" % (esp.get_chip_description()))
+
             esp = esp.run_stub()
+
             if self._config.baud > initial_baud:
                 try:
                     esp.change_baud(self._config.baud)
@@ -70,6 +74,10 @@ class FlashingThread(threading.Thread):
             args.verify = False  # TRUE is deprecated
             args.compress = True
             args.addr_filename = [[int("0x00000", 0),    open(self._config.firmware_path, 'rb')]]
+
+            print("Configuring flash size...")
+            esptool.detect_flash_size(esp, args)
+            esp.flash_set_parameters(esptool.flash_size_bytes(args.flash_size))
 
             if self._config.erase_before_flash:
                 esptool.erase_flash(esp, args)
