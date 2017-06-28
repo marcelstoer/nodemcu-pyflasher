@@ -1,4 +1,4 @@
-#!/usr/local/opt/python/bin/python2.7
+#!/bin/env python2.7
 #
 # ESP8266 & ESP32 ROM Bootloader Utility
 # Copyright (C) 2014-2016 Fredrik Ahlberg, Angus Gratton, Espressif Systems (Shanghai) PTE LTD, other contributors as noted.
