@@ -14,7 +14,7 @@ from esptool import ESPLoader
 from esptool import NotImplementedInROMError
 from argparse import Namespace
 
-__version__ = "2.0-beta"
+__version__ = "2.1"
 __supported_baud_rates__ = [9600, 57600, 74880, 115200, 230400, 460800, 921600]
 
 # ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ class FlashingThread(threading.Thread):
             args.no_stub = False
             args.verify = False  # TRUE is deprecated
             args.compress = True
-            args.addr_filename = [[int("0x00000", 0),    open(self._config.firmware_path, 'rb')]]
+            args.addr_filename = [[int("0x00000", 0), open(self._config.firmware_path, 'rb')]]
 
             print("Configuring flash size...")
             esptool.detect_flash_size(esp, args)
@@ -82,9 +82,6 @@ class FlashingThread(threading.Thread):
             if self._config.erase_before_flash:
                 esptool.erase_flash(esp, args)
             esptool.write_flash(esp, args)
-
-            self._parent.log_message("Hard resetting...")  # replicate behavior from esptool.py:2111
-            esp.hard_reset()
         except SerialException as e:
             self._parent.report_error(e.strerror)
             raise e
