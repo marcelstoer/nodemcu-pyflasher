@@ -10,6 +10,7 @@ command_lines = [
     "-F -n Exit images/exit.png images.py",
     "-a -F -n Reload images/reload.png images.py",
     "-a -F -n Splash images/splash.png images.py",
+    "-a -F -n Info images/info.png images.py",
     "-a -F -i -n Icon images/icon-256.png images.py",
     ]
 

@@ -15,6 +15,20 @@ from esptool import NotImplementedInROMError
 from argparse import Namespace
 
 __version__ = "2.1"
+__flash_help__ = '''
+<p>This setting is highly dependent on your device!<p>
+<p>
+  Details at <a style="color: #004CE5;"
+        href="https://www.esp32.com/viewtopic.php?p=5523&sid=08ef44e13610ecf2a2a33bb173b0fd5c#p5523">http://bit.ly/2v5Rd32</a>
+  and in the <a style="color: #004CE5;" href="https://github.com/espressif/esptool/#flash-modes">esptool
+  documentation</a>
+<ul>
+  <li>Most ESP32 and ESP8266 ESP-12 use 'dio'.</li>
+  <li>Most ESP8266 ESP-01/07 use 'qio'.</li>
+  <li>ESP8285 requires 'dout'.</li>
+</ul>
+</p>
+'''
 __supported_baud_rates__ = [9600, 57600, 74880, 115200, 230400, 460800, 921600]
 
 # ---------------------------------------------------------------------------
@@ -95,7 +109,7 @@ class FlashConfig:
     def __init__(self):
         self.baud = 115200
         self.erase_before_flash = False
-        self.mode = "qio"
+        self.mode = "dio"
         self.firmware_path = None
         self.port = None
 
@@ -193,6 +207,7 @@ class NodeMcuFlasher(wx.Frame):
         reload_button = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
                                         size=(bmp.GetWidth() + 7, bmp.GetHeight() + 7))
         reload_button.Bind(wx.EVT_BUTTON, on_reload)
+        reload_button.SetToolTipString("Reload serial device list")
 
         file_picker = wx.FilePickerCtrl(panel, style=wx.FLP_USE_TEXTCTRL)
         file_picker.Bind(wx.EVT_FILEPICKER_CHANGED, on_pick_file)
@@ -228,8 +243,9 @@ class NodeMcuFlasher(wx.Frame):
             sizer.Add(radio_button)
             sizer.AddSpacer(10)
 
-        add_flash_mode_radio_button(flashmode_boxsizer, 0, "qio", "Quad Flash I/O (qio)")
-        add_flash_mode_radio_button(flashmode_boxsizer, 1, "dio", "Dual Flash I/O (dio), usually for >=4MB flash chips")
+        add_flash_mode_radio_button(flashmode_boxsizer, 0, "qio", "Quad I/O (qio)")
+        add_flash_mode_radio_button(flashmode_boxsizer, 1, "dio", "Dual I/O (dio)")
+        add_flash_mode_radio_button(flashmode_boxsizer, 2, "dout", "Dual Output (dout)")
 
         erase_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -259,6 +275,26 @@ class NodeMcuFlasher(wx.Frame):
         file_label = wx.StaticText(panel, label="NodeMCU firmware")
         baud_label = wx.StaticText(panel, label="Baud rate")
         flashmode_label = wx.StaticText(panel, label="Flash mode")
+
+        def on_info_hover(event):
+            from HtmlPopupTransientWindow import HtmlPopupTransientWindow
+            win = HtmlPopupTransientWindow(self, wx.SIMPLE_BORDER, __flash_help__, "#FFB6C1", (410, 140))
+
+            image = event.GetEventObject()
+            image_position = image.ClientToScreen((0, 0))
+            image_size = image.GetSize()
+            win.Position(image_position, (0, image_size[1]))
+
+            win.Popup()
+
+        icon = wx.StaticBitmap(panel, wx.ID_ANY, images.Info.GetBitmap())
+        icon.Bind(wx.EVT_MOTION, on_info_hover)
+
+        flashmode_label_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
+        flashmode_label_boxsizer.Add(flashmode_label, 1, wx.EXPAND)
+        flashmode_label_boxsizer.AddStretchSpacer(0)
+        flashmode_label_boxsizer.Add(icon, 0, wx.ALIGN_RIGHT, 20)
+
         erase_label = wx.StaticText(panel, label="Erase flash")
         console_label = wx.StaticText(panel, label="Console")
 
@@ -266,7 +302,7 @@ class NodeMcuFlasher(wx.Frame):
                     port_label, (serial_boxsizer, 1, wx.EXPAND),
                     file_label, (file_picker, 1, wx.EXPAND),
                     baud_label, baud_boxsizer,
-                    flashmode_label, flashmode_boxsizer,
+                    flashmode_label_boxsizer, flashmode_boxsizer,
                     erase_label, erase_boxsizer,
                     (wx.StaticText(panel, label="")), (button, 1, wx.EXPAND),
                     (console_label, 1, wx.EXPAND), (self.console_ctrl, 1, wx.EXPAND)])
