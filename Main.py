@@ -77,7 +77,8 @@ class FlashingThread(threading.Thread):
                 try:
                     esp.change_baud(self._config.baud)
                 except NotImplementedInROMError:
-                    print("WARNING: ROM doesn't support changing baud rate. Keeping initial baud rate %d" % initial_baud)
+                    print("WARNING: ROM doesn't support changing baud rate. Keeping initial baud rate %d." %
+                          initial_baud)
 
             args = Namespace()
             args.flash_size = "detect"
@@ -96,6 +97,8 @@ class FlashingThread(threading.Thread):
             if self._config.erase_before_flash:
                 esptool.erase_flash(esp, args)
             esptool.write_flash(esp, args)
+            # The last line printed by esptool is "Leaving..." -> some indication that the process is done is needed
+            print("\nDone.")
         except SerialException as e:
             self._parent.report_error(e.strerror)
             raise e
@@ -219,12 +222,12 @@ class NodeMcuFlasher(wx.Frame):
 
         baud_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        def add_baud_radio_button(sizer, idx, rate):
-            style = wx.RB_GROUP if idx == 0 else 0
-            radio_button = wx.RadioButton(panel, name="baud-%d" % rate, label="%d" % rate, style=style)
-            radio_button.rate = rate
+        def add_baud_radio_button(sizer, index, baud_rate):
+            style = wx.RB_GROUP if index == 0 else 0
+            radio_button = wx.RadioButton(panel, name="baud-%d" % baud_rate, label="%d" % baud_rate, style=style)
+            radio_button.rate = baud_rate
             # sets default value
-            radio_button.SetValue(rate == self._config.baud)
+            radio_button.SetValue(baud_rate == self._config.baud)
             radio_button.Bind(wx.EVT_RADIOBUTTON, on_baud_changed)
             sizer.Add(radio_button)
             sizer.AddSpacer(10)
@@ -234,8 +237,8 @@ class NodeMcuFlasher(wx.Frame):
 
         flashmode_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        def add_flash_mode_radio_button(sizer, idx, mode, label):
-            style = wx.RB_GROUP if idx == 0 else 0
+        def add_flash_mode_radio_button(sizer, index, mode, label):
+            style = wx.RB_GROUP if index == 0 else 0
             radio_button = wx.RadioButton(panel, name="mode-%s" % mode, label="%s" % label, style=style)
             radio_button.Bind(wx.EVT_RADIOBUTTON, on_mode_changed)
             radio_button.mode = mode
@@ -249,8 +252,8 @@ class NodeMcuFlasher(wx.Frame):
 
         erase_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        def add_erase_radio_button(sizer, idx, erase_before_flash, label, value):
-            style = wx.RB_GROUP if idx == 0 else 0
+        def add_erase_radio_button(sizer, index, erase_before_flash, label, value):
+            style = wx.RB_GROUP if index == 0 else 0
             radio_button = wx.RadioButton(panel, name="erase-%s" % erase_before_flash, label="%s" % label, style=style)
             radio_button.Bind(wx.EVT_RADIOBUTTON, on_erase_changed)
             radio_button.erase = erase_before_flash
