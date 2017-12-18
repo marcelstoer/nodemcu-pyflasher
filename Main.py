@@ -14,7 +14,7 @@ from esptool import ESPLoader
 from esptool import NotImplementedInROMError
 from argparse import Namespace
 
-__version__ = "2.1"
+__version__ = "2.2"
 __flash_help__ = '''
 <p>This setting is highly dependent on your device!<p>
 <p>
@@ -23,9 +23,9 @@ __flash_help__ = '''
   and in the <a style="color: #004CE5;" href="https://github.com/espressif/esptool/#flash-modes">esptool
   documentation</a>
 <ul>
-  <li>Most ESP32 and ESP8266 ESP-12 use 'dio'.</li>
-  <li>Most ESP8266 ESP-01/07 use 'qio'.</li>
-  <li>ESP8285 requires 'dout'.</li>
+  <li>Most ESP32 and ESP8266 ESP-12 use DIO.</li>
+  <li>Most ESP8266 ESP-01/07 use QIO.</li>
+  <li>ESP8285 requires DOUT.</li>
 </ul>
 </p>
 '''
@@ -246,9 +246,9 @@ class NodeMcuFlasher(wx.Frame):
             sizer.Add(radio_button)
             sizer.AddSpacer(10)
 
-        add_flash_mode_radio_button(flashmode_boxsizer, 0, "qio", "Quad I/O (qio)")
-        add_flash_mode_radio_button(flashmode_boxsizer, 1, "dio", "Dual I/O (dio)")
-        add_flash_mode_radio_button(flashmode_boxsizer, 2, "dout", "Dual Output (dout)")
+        add_flash_mode_radio_button(flashmode_boxsizer, 0, "qio", "Quad I/O (QIO)")
+        add_flash_mode_radio_button(flashmode_boxsizer, 1, "dio", "Dual I/O (DIO)")
+        add_flash_mode_radio_button(flashmode_boxsizer, 2, "dout", "Dual Output (DOUT)")
 
         erase_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
 
