@@ -1,7 +1,9 @@
 
 # coding=utf-8
 
-import sys, os, wx
+import sys
+import os
+import wx
 import wx.html
 import wx.lib.wxpTag
 import webbrowser
@@ -29,10 +31,12 @@ class AboutDlg(wx.Dialog):
 
     <p>
     As with everything I offer for free, this is donation-ware.
-    <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=HFN4ZMET5XS2Q"><img src="{0}/images/paypal-256.png" width="256" height="88" alt="Donate with PayPal"></a>
+    <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=HFN4ZMET5XS2Q">
+    <img src="{0}/images/paypal-256.png" width="256" height="88" alt="Donate with PayPal">
+    </a>
     </p>
 
-    <p>&copy; 2017 Marcel St&ouml;r. Licensed under MIT.</p>
+    <p>&copy; 2018 Marcel St&ouml;r. Licensed under MIT.</p>
 
     <p>
         <wxp module="wx" class="Button">
@@ -57,7 +61,8 @@ class AboutDlg(wx.Dialog):
         self.SetClientSize(html.GetSize())
         self.CentreOnParent(wx.BOTH)
 
-    def _get_bundle_dir(self):
+    @staticmethod
+    def _get_bundle_dir():
         # set by PyInstaller, see http://pyinstaller.readthedocs.io/en/v3.2/runtime-information.html
         if getattr(sys, 'frozen', False):
             return sys._MEIPASS

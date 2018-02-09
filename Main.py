@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
 import wx
+import wx.adv
 import wx.lib.inspection
 import wx.lib.mixins.inspection
-import sys, os
+
+import sys
+import os
 import esptool
 import threading
 import json
@@ -14,7 +17,7 @@ from esptool import ESPLoader
 from esptool import NotImplementedInROMError
 from argparse import Namespace
 
-__version__ = "2.2"
+__version__ = "3.0"
 __flash_help__ = '''
 <p>This setting is highly dependent on your device!<p>
 <p>
@@ -50,7 +53,9 @@ class RedirectText:
         else:
             wx.CallAfter(self.__out.AppendText, string)
 
+    # noinspection PyMethodMayBeStatic
     def flush(self):
+        # noinspection PyStatementEffect
         None
 
 # ---------------------------------------------------------------------------
@@ -210,7 +215,7 @@ class NodeMcuFlasher(wx.Frame):
         reload_button = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
                                         size=(bmp.GetWidth() + 7, bmp.GetHeight() + 7))
         reload_button.Bind(wx.EVT_BUTTON, on_reload)
-        reload_button.SetToolTipString("Reload serial device list")
+        reload_button.SetToolTip("Reload serial device list")
 
         file_picker = wx.FilePickerCtrl(panel, style=wx.FLP_USE_TEXTCTRL)
         file_picker.Bind(wx.EVT_FILEPICKER_CHANGED, on_pick_file)
@@ -322,7 +327,8 @@ class NodeMcuFlasher(wx.Frame):
                 break
             count += 1
 
-    def _get_serial_ports(self):
+    @staticmethod
+    def _get_serial_ports():
         ports = [""]
         for port, desc, hwid in sorted(list_ports.comports()):
             ports.append(port)
@@ -332,7 +338,7 @@ class NodeMcuFlasher(wx.Frame):
         self.SetIcon(images.Icon.GetIcon())
 
     def _build_status_bar(self):
-        self.statusBar = self.CreateStatusBar(2, wx.ST_SIZEGRIP)
+        self.statusBar = self.CreateStatusBar(2, wx.STB_SIZEGRIP)
         self.statusBar.SetStatusWidths([-2, -1])
         status_text = "Welcome to NodeMCU PyFlasher %s" % __version__
         self.statusBar.SetStatusText(status_text, 0)
@@ -356,7 +362,8 @@ class NodeMcuFlasher(wx.Frame):
 
         self.SetMenuBar(self.menuBar)
 
-    def _get_config_file_path(self):
+    @staticmethod
+    def _get_config_file_path():
         return wx.StandardPaths.Get().GetUserConfigDir() + "/nodemcu-pyflasher.json"
 
     # Menu methods
@@ -380,13 +387,12 @@ class NodeMcuFlasher(wx.Frame):
 
 
 # ---------------------------------------------------------------------------
-class MySplashScreen(wx.SplashScreen):
+class MySplashScreen(wx.adv.SplashScreen):
     def __init__(self):
-        wx.SplashScreen.__init__(self, images.Splash.GetBitmap(),
-                                 wx.SPLASH_CENTRE_ON_SCREEN | wx.SPLASH_TIMEOUT,
-                                 2500, None, -1)
+        wx.adv.SplashScreen.__init__(self, images.Splash.GetBitmap(),
+                                     wx.adv.SPLASH_CENTRE_ON_SCREEN | wx.adv.SPLASH_TIMEOUT, 2500, None, -1)
         self.Bind(wx.EVT_CLOSE, self._on_close)
-        self.__fc = wx.FutureCall(2000, self._show_main)
+        self.__fc = wx.CallLater(2000, self._show_main)
 
     def _on_close(self, evt):
         # Make sure the default handler runs too so this window gets
@@ -412,7 +418,7 @@ class MySplashScreen(wx.SplashScreen):
 # ----------------------------------------------------------------------------
 class App(wx.App, wx.lib.mixins.inspection.InspectionMixin):
     def OnInit(self):
-        wx.SystemOptions.SetOptionInt("mac.window-plain-transition", 1)
+        wx.SystemOptions.SetOption("mac.window-plain-transition", 1)
         self.SetAppName("NodeMCU PyFlasher")
 
         # Create and show the splash screen.  It will then create and
@@ -435,6 +441,8 @@ def main():
     app.MainLoop()
 # ---------------------------------------------------------------------------
 
+
 if __name__ == '__main__':
     __name__ = 'Main'
     main()
+

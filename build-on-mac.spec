@@ -2,7 +2,6 @@
 
 block_cipher = None
 
-
 a = Analysis(['nodemcu-pyflasher.py'],
              binaries=None,
              datas=[("images", "images")],
@@ -26,6 +25,6 @@ exe = EXE(pyz,
           upx=True,
           console=False , icon='images/icon-256.icns')
 app = BUNDLE(exe,
-             name='NodeMCU-PyFlasher.app',
+             name='NodeMCU-PyFlasher-3.0.app',
              icon='./images/icon-256.icns',
              bundle_identifier='com.frightanic.nodemcu-pyflasher')
