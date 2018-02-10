@@ -10,7 +10,7 @@ Self-contained [NodeMCU](https://github.com/nodemcu/nodemcu-firmware) flasher wi
 ![Image of NodeMCU PyFlasher GUI](images/gui.png)
 
 ## Installation
-NodeMCU PyFlasher doesn't have to be installed, just double-click it and it'll start. Check the [releases section](https://github.com/marcelstoer/nodemcu-pyflasher/releases) for downloads for your platform. For every release there's at least a .exe file for Windows. Starting from 3.0 there's also a ZIP which contains a macOS bundle.
+NodeMCU PyFlasher doesn't have to be installed, just double-click it and it'll start. Check the [releases section](https://github.com/marcelstoer/nodemcu-pyflasher/releases) for downloads for your platform. For every release there's at least a .exe file for Windows. Starting from 3.0 there's also a .dmg for macOS.
 
 ## Status
 Scan the [list of open issues](https://github.com/marcelstoer/nodemcu-pyflasher/issues) for bugs and pending features.
