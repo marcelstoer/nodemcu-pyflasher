@@ -10,12 +10,10 @@ Self-contained [NodeMCU](https://github.com/nodemcu/nodemcu-firmware) flasher wi
 ![Image of NodeMCU PyFlasher GUI](images/gui.png)
 
 ## Installation
-NodeMCU PyFlasher doesn't have to be installed, just double-click it and it'll start. Check the [releases section](https://github.com/marcelstoer/nodemcu-pyflasher/releases) for downloads for your platform. For every release there's at least a .exe file for Windows.
+NodeMCU PyFlasher doesn't have to be installed, just double-click it and it'll start. Check the [releases section](https://github.com/marcelstoer/nodemcu-pyflasher/releases) for downloads for your platform. For every release there's at least a .exe file for Windows. Starting from 3.0 there's also a ZIP which contains a macOS bundle.
 
 ## Status
 Scan the [list of open issues](https://github.com/marcelstoer/nodemcu-pyflasher/issues) for bugs and pending features.
-
-- Due to [pyinstaller/pyinstaller#2355](https://github.com/pyinstaller/pyinstaller/issues/2355) I can't provide an app bundle for macOS yet. The PyInstaller `.spec` file and the build script are ready, though. Of course you can still *run* the application on macOS. Clone this repo and then do `python nodemcu-pyflasher.py` (see "[Build it yourself](#build-it-yourself)" for pre-requisits).
 
 **Note** 
 
@@ -32,9 +30,9 @@ All open-source development by the author is donationware. Show your love and su
 ## Build it yourself
 If you want to build this application yourself you need to:
 
-- Install Python
-- Install [wxPython 3.x](https://sourceforge.net/projects/wxpython/files/wxPython/) (not 4.0 betas!)
-- Install [esptool.py](https://github.com/espressif/esptool#easy-installation) which brings pySerial or install pySerial standalone
+- Install Python 3.x
+- Install [wxPython 4.x](https://wxpython.org/) manually or run `pip install wxpython`
+- Install [esptool.py](https://github.com/espressif/esptool#easy-installation)  and its dependencies manually or run `pip install esptool`
 
 ## Why this project exists
 
