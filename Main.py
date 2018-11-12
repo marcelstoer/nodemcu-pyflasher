@@ -15,9 +15,10 @@ from serial import SerialException
 from serial.tools import list_ports
 from esptool import ESPLoader
 from esptool import NotImplementedInROMError
+from esptool import FatalError
 from argparse import Namespace
 
-__version__ = "3.0"
+__version__ = "4.0"
 __flash_help__ = '''
 <p>This setting is highly dependent on your device!<p>
 <p>
@@ -71,10 +72,14 @@ class FlashingThread(threading.Thread):
 
     def run(self):
         try:
+            print("esptool.py v%s" % esptool.__version__)
             initial_baud = min(ESPLoader.ESP_ROM_BAUD, self._config.baud)
 
-            esp = ESPLoader.detect_chip(self._config.port, initial_baud)
+            esp = self.connect_to_esp(initial_baud)
+
             print("Chip is %s" % (esp.get_chip_description()))
+            print("Features: %s" % ", ".join(esp.get_chip_features()))
+            esptool.read_mac(esp, Namespace())
 
             esp = esp.run_stub()
 
@@ -103,10 +108,31 @@ class FlashingThread(threading.Thread):
                 esptool.erase_flash(esp, args)
             esptool.write_flash(esp, args)
             # The last line printed by esptool is "Leaving..." -> some indication that the process is done is needed
-            print("\nDone.")
+            print("\nDone. Unplug/replug or reset device.")
+            esp._port.close()
         except SerialException as e:
             self._parent.report_error(e.strerror)
             raise e
+
+    @staticmethod
+    def connect_to_esp(initial_baud):
+        # stripped down version of esptool.py:2537
+        ser_list = sorted(ports.device for ports in list_ports.comports())
+        print("Found %d serial ports" % len(ser_list))
+        esp = None
+        for each_port in reversed(ser_list):
+            print("Testing serial port %s" % each_port)
+            try:
+                esp = ESPLoader.detect_chip(each_port, initial_baud)
+                break  # on the first detected Espressif device
+            except (FatalError, OSError) as err:
+                print("%s failed to connect: %s" % (each_port, err))
+                esp = None
+        if esp is None:
+            print("\nAll of the %d available serial ports could not connect to a Espressif device." % len(ser_list))
+            raise FatalError('No serial port with ESP')
+        return esp
+
 
 # ---------------------------------------------------------------------------
 
@@ -119,7 +145,6 @@ class FlashConfig:
         self.erase_before_flash = False
         self.mode = "dio"
         self.firmware_path = None
-        self.port = None
 
     @classmethod
     def load(cls, file_path):
@@ -127,7 +152,6 @@ class FlashConfig:
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
                 data = json.load(f)
-            conf.port = data['port']
             conf.baud = data['baud']
             conf.mode = data['mode']
             conf.erase_before_flash = data['erase']
@@ -135,7 +159,6 @@ class FlashConfig:
 
     def safe(self, file_path):
         data = {
-            'port': self.port,
             'baud': self.baud,
             'mode': self.mode,
             'erase': self.erase_before_flash,
@@ -144,7 +167,7 @@ class FlashConfig:
             json.dump(data, f)
 
     def is_complete(self):
-        return self.firmware_path is not None and self.port is not None
+        return self.firmware_path is not None
 
 # ---------------------------------------------------------------------------
 
@@ -169,8 +192,6 @@ class NodeMcuFlasher(wx.Frame):
         self.Show(True)
 
     def _init_ui(self):
-        def on_reload(event):
-            self.choice.SetItems(self._get_serial_ports())
 
         def on_baud_changed(event):
             radio_button = event.GetEventObject()
@@ -195,10 +216,6 @@ class NodeMcuFlasher(wx.Frame):
             worker = FlashingThread(self, self._config)
             worker.start()
 
-        def on_select_port(event):
-            choice = event.GetEventObject()
-            self._config.port = choice.GetString(choice.GetSelection())
-
         def on_pick_file(event):
             self._config.firmware_path = event.GetPath().replace("'", "")
 
@@ -208,22 +225,8 @@ class NodeMcuFlasher(wx.Frame):
 
         fgs = wx.FlexGridSizer(7, 2, 10, 10)
 
-        self.choice = wx.Choice(panel, choices=self._get_serial_ports())
-        self.choice.Bind(wx.EVT_CHOICE, on_select_port)
-        self._select_configured_port()
-        bmp = images.Reload.GetBitmap()
-        reload_button = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
-                                        size=(bmp.GetWidth() + 7, bmp.GetHeight() + 7))
-        reload_button.Bind(wx.EVT_BUTTON, on_reload)
-        reload_button.SetToolTip("Reload serial device list")
-
         file_picker = wx.FilePickerCtrl(panel, style=wx.FLP_USE_TEXTCTRL)
         file_picker.Bind(wx.EVT_FILEPICKER_CHANGED, on_pick_file)
-
-        serial_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
-        serial_boxsizer.Add(self.choice, 1,  wx.EXPAND)
-        serial_boxsizer.AddStretchSpacer(0)
-        serial_boxsizer.Add(reload_button, 0, wx.ALIGN_RIGHT, 20)
 
         baud_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -279,7 +282,6 @@ class NodeMcuFlasher(wx.Frame):
         self.console_ctrl.SetForegroundColour(wx.RED)
         self.console_ctrl.SetDefaultStyle(wx.TextAttr(wx.RED))
 
-        port_label = wx.StaticText(panel, label="Serial port")
         file_label = wx.StaticText(panel, label="NodeMCU firmware")
         baud_label = wx.StaticText(panel, label="Baud rate")
         flashmode_label = wx.StaticText(panel, label="Flash mode")
@@ -307,32 +309,16 @@ class NodeMcuFlasher(wx.Frame):
         console_label = wx.StaticText(panel, label="Console")
 
         fgs.AddMany([
-                    port_label, (serial_boxsizer, 1, wx.EXPAND),
                     file_label, (file_picker, 1, wx.EXPAND),
                     baud_label, baud_boxsizer,
                     flashmode_label_boxsizer, flashmode_boxsizer,
                     erase_label, erase_boxsizer,
                     (wx.StaticText(panel, label="")), (button, 1, wx.EXPAND),
                     (console_label, 1, wx.EXPAND), (self.console_ctrl, 1, wx.EXPAND)])
-        fgs.AddGrowableRow(6, 1)
+        fgs.AddGrowableRow(5, 1)
         fgs.AddGrowableCol(1, 1)
         hbox.Add(fgs, proportion=2, flag=wx.ALL | wx.EXPAND, border=15)
         panel.SetSizer(hbox)
-
-    def _select_configured_port(self):
-        count = 0
-        for item in self.choice.GetItems():
-            if item == self._config.port:
-                self.choice.Select(count)
-                break
-            count += 1
-
-    @staticmethod
-    def _get_serial_ports():
-        ports = [""]
-        for port, desc, hwid in sorted(list_ports.comports()):
-            ports.append(port)
-        return ports
 
     def _set_icons(self):
         self.SetIcon(images.Icon.GetIcon())
