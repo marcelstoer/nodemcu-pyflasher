@@ -36,7 +36,7 @@ class AboutDlg(wx.Dialog):
     </a>
     </p>
 
-    <p>&copy; 2018 Marcel St&ouml;r. Licensed under MIT.</p>
+    <p>&copy; 2019 Marcel St&ouml;r. Licensed under MIT.</p>
 
     <p>
         <wxp module="wx" class="Button">
@@ -65,6 +65,7 @@ class AboutDlg(wx.Dialog):
     def _get_bundle_dir():
         # set by PyInstaller, see http://pyinstaller.readthedocs.io/en/v3.2/runtime-information.html
         if getattr(sys, 'frozen', False):
+            # noinspection PyUnresolvedReferences,PyProtectedMember
             return sys._MEIPASS
         else:
             return os.path.dirname(os.path.abspath(__file__))
