@@ -74,47 +74,25 @@ class FlashingThread(threading.Thread):
 
     def run(self):
         try:
-            print("esptool.py v%s" % esptool.__version__)
-            initial_baud = min(ESPLoader.ESP_ROM_BAUD, self._config.baud)
+            command = ""
 
-            if self._config.port.startswith(__auto_select__):
-                esp = self.connect_to_esp(initial_baud)
-            else:
-                esp = ESPLoader.detect_chip(self._config.port, initial_baud)
+            if not self._config.port.startswith(__auto_select__):
+                command += "--port %s " % self._config.port
 
-            print("Chip is %s" % (esp.get_chip_description()))
-            print("Features: %s" % ", ".join(esp.get_chip_features()))
-            esptool.read_mac(esp, Namespace())
-
-            esp = esp.run_stub()
-
-            if self._config.baud > initial_baud:
-                try:
-                    esp.change_baud(self._config.baud)
-                except NotImplementedInROMError:
-                    print("WARNING: ROM doesn't support changing baud rate. Keeping initial baud rate %d." %
-                          initial_baud)
-
-            args = Namespace()
-            args.flash_size = "detect"
-            args.flash_mode = self._config.mode
-            args.flash_freq = "40m"
-            args.no_progress = False
-            args.no_stub = False
-            args.verify = False  # TRUE is deprecated
-            args.compress = True
-            args.addr_filename = [[int("0x00000", 0), open(self._config.firmware_path, 'rb')]]
-
-            print("Configuring flash size...")
-            esptool.detect_flash_size(esp, args)
-            esp.flash_set_parameters(esptool.flash_size_bytes(args.flash_size))
+            command += "--baud %s --after no_reset write_flash --flash_mode %s 0x00000 %s" % \
+                       (self._config.baud, self._config.mode, self._config.firmware_path)
 
             if self._config.erase_before_flash:
-                esptool.erase_flash(esp, args)
-            esptool.write_flash(esp, args)
-            # The last line printed by esptool is "Leaving..." -> some indication that the process is done is needed
-            print("\nDone. Unplug/replug or reset device.")
-            esp._port.close()
+                command += " --erase-all"
+
+            print("Command: esptool.py %s\n" % command)
+
+            esptool.main(command.split(" "))
+
+            # The last line printed by esptool is "Staying in bootloader." -> some indication that the process is
+            # done is needed
+            print("\nFirmware successfully flashed. Unplug/replug or reset device \nto switch back to normal boot "
+                  "mode.")
         except SerialException as e:
             self._parent.report_error(e.strerror)
             raise e
