@@ -74,20 +74,24 @@ class FlashingThread(threading.Thread):
 
     def run(self):
         try:
-            command = ""
+            command = []
 
             if not self._config.port.startswith(__auto_select__):
-                command += "--port %s " % self._config.port
+                command.append("--port")
+                command.append(self._config.port)
 
-            command += "--baud %s --after no_reset write_flash --flash_mode %s 0x00000 %s" % \
-                       (self._config.baud, self._config.mode, self._config.firmware_path)
+            command.extend(["--baud", str(self._config.baud),
+                            "--after", "no_reset",
+                            "write_flash",
+                            "--flash_mode", self._config.mode,
+                            "0x00000", self._config.firmware_path])
 
             if self._config.erase_before_flash:
-                command += " --erase-all"
+                command.append("--erase-all")
 
-            print("Command: esptool.py %s\n" % command)
+            print("Command: esptool.py %s\n" % " ".join(command))
 
-            esptool.main(command.split(" "))
+            esptool.main(command)
 
             # The last line printed by esptool is "Staying in bootloader." -> some indication that the process is
             # done is needed
@@ -96,25 +100,6 @@ class FlashingThread(threading.Thread):
         except SerialException as e:
             self._parent.report_error(e.strerror)
             raise e
-
-    @staticmethod
-    def connect_to_esp(initial_baud):
-        # stripped down version of esptool.py:2537
-        ser_list = sorted(ports.device for ports in list_ports.comports())
-        print("Found %d serial ports" % len(ser_list))
-        esp = None
-        for each_port in reversed(ser_list):
-            print("Testing serial port %s" % each_port)
-            try:
-                esp = ESPLoader.detect_chip(each_port, initial_baud)
-                break  # on the first detected Espressif device
-            except (FatalError, OSError) as err:
-                print("%s failed to connect: %s" % (each_port, err))
-                esp = None
-        if esp is None:
-            print("\nAll of the %d available serial ports could not connect to a Espressif device." % len(ser_list))
-            raise FatalError('No serial port with ESP')
-        return esp
 
 
 # ---------------------------------------------------------------------------
