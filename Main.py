@@ -147,7 +147,7 @@ class FlashConfig:
 class NodeMcuFlasher(wx.Frame):
 
     def __init__(self, parent, title):
-        wx.Frame.__init__(self, parent, -1, title, size=(700, 650),
+        wx.Frame.__init__(self, parent, -1, title, size=(725, 650),
                           style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
         self._config = FlashConfig.load(self._get_config_file_path())
 
@@ -158,11 +158,10 @@ class NodeMcuFlasher(wx.Frame):
 
         sys.stdout = RedirectText(self.console_ctrl)
 
-        self.SetMinSize((640, 480))
         self.Centre(wx.BOTH)
         self.Show(True)
         print("Connect your device")
-        print("\nIf you chose the serial port auto-select feature you might want to ")
+        print("\nIf you chose the serial port auto-select feature you might need to ")
         print("turn off Bluetooth")
 
     def _init_ui(self):
@@ -271,10 +270,11 @@ class NodeMcuFlasher(wx.Frame):
         button.Bind(wx.EVT_BUTTON, on_clicked)
 
         self.console_ctrl = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
-        self.console_ctrl.SetFont(wx.Font(13, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-        self.console_ctrl.SetBackgroundColour(wx.BLACK)
-        self.console_ctrl.SetForegroundColour(wx.RED)
-        self.console_ctrl.SetDefaultStyle(wx.TextAttr(wx.RED))
+        self.console_ctrl.SetFont(wx.Font((0, 13), wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL,
+                                          wx.FONTWEIGHT_NORMAL))
+        self.console_ctrl.SetBackgroundColour(wx.WHITE)
+        self.console_ctrl.SetForegroundColour(wx.BLUE)
+        self.console_ctrl.SetDefaultStyle(wx.TextAttr(wx.BLUE))
 
         port_label = wx.StaticText(panel, label="Serial port")
         file_label = wx.StaticText(panel, label="NodeMCU firmware")
