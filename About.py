@@ -36,7 +36,7 @@ class AboutDlg(wx.Dialog):
     </a>
     </p>
 
-    <p>&copy; 2019 Marcel St&ouml;r. Licensed under MIT.</p>
+    <p>&copy; 2020 Marcel St&ouml;r. Licensed under MIT.</p>
 
     <p>
         <wxp module="wx" class="Button">
