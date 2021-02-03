@@ -13,12 +13,8 @@ import json
 import images as images
 from serial import SerialException
 from serial.tools import list_ports
-from esptool import ESPLoader
-from esptool import NotImplementedInROMError
-from esptool import FatalError
-from argparse import Namespace
 
-__version__ = "4.0"
+__version__ = "5.0.0"
 __flash_help__ = '''
 <p>This setting is highly dependent on your device!<p>
 <p>
@@ -61,6 +57,11 @@ class RedirectText:
         # noinspection PyStatementEffect
         None
 
+    # esptool >=3 handles output differently of the output stream is not a TTY
+    # noinspection PyMethodMayBeStatic
+    def isatty(self):
+        return True
+
 # ---------------------------------------------------------------------------
 
 
@@ -83,6 +84,8 @@ class FlashingThread(threading.Thread):
             command.extend(["--baud", str(self._config.baud),
                             "--after", "no_reset",
                             "write_flash",
+                            # https://github.com/espressif/esptool/issues/599
+                            "--flash_size", "detect",
                             "--flash_mode", self._config.mode,
                             "0x00000", self._config.firmware_path])
 
@@ -209,7 +212,7 @@ class NodeMcuFlasher(wx.Frame):
         self._select_configured_port()
         bmp = images.Reload.GetBitmap()
         reload_button = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
-                                        size=(bmp.GetWidth() + 7, bmp.GetHeight() + 7))
+                                        size=(bmp.GetWidth() + 2, bmp.GetHeight() + 2))
         reload_button.Bind(wx.EVT_BUTTON, on_reload)
         reload_button.SetToolTip("Reload serial device list")
 
@@ -219,7 +222,7 @@ class NodeMcuFlasher(wx.Frame):
         serial_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
         serial_boxsizer.Add(self.choice, 1, wx.EXPAND)
         serial_boxsizer.AddStretchSpacer(0)
-        serial_boxsizer.Add(reload_button, 0, wx.ALIGN_RIGHT, 20)
+        serial_boxsizer.Add(reload_button)
 
         baud_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -298,7 +301,7 @@ class NodeMcuFlasher(wx.Frame):
         flashmode_label_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
         flashmode_label_boxsizer.Add(flashmode_label, 1, wx.EXPAND)
         flashmode_label_boxsizer.AddStretchSpacer(0)
-        flashmode_label_boxsizer.Add(icon, 0, wx.ALIGN_RIGHT, 20)
+        flashmode_label_boxsizer.Add(icon)
 
         erase_label = wx.StaticText(panel, label="Erase flash")
         console_label = wx.StaticText(panel, label="Console")

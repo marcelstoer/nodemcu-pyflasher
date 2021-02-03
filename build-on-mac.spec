@@ -25,6 +25,6 @@ exe = EXE(pyz,
           upx=True,
           console=False , icon='images/icon-256.icns')
 app = BUNDLE(exe,
-             name='NodeMCU-PyFlasher-4.0.app',
+             name='NodeMCU-PyFlasher-5.0.0.app',
              icon='./images/icon-256.icns',
              bundle_identifier='com.frightanic.nodemcu-pyflasher')

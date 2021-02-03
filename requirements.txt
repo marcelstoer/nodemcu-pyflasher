@@ -1,3 +1,5 @@
-esptool==2.6
-wxPython==4.0.4
-PyInstaller==3.6
+esptool>=3.0
+pyserial~=3.5
+wxPython~=4.1.1
+PyInstaller~=4.2
+httplib2>=0.18.1
