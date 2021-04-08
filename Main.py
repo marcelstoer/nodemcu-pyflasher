@@ -210,9 +210,8 @@ class NodeMcuFlasher(wx.Frame):
         self.choice = wx.Choice(panel, choices=self._get_serial_ports())
         self.choice.Bind(wx.EVT_CHOICE, on_select_port)
         self._select_configured_port()
-        bmp = images.Reload.GetBitmap()
-        reload_button = wx.BitmapButton(panel, id=wx.ID_ANY, bitmap=bmp,
-                                        size=(bmp.GetWidth() + 2, bmp.GetHeight() + 2))
+
+        reload_button = wx.Button(panel, label="Reload")
         reload_button.Bind(wx.EVT_BUTTON, on_reload)
         reload_button.SetToolTip("Reload serial device list")
 
@@ -221,8 +220,7 @@ class NodeMcuFlasher(wx.Frame):
 
         serial_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
         serial_boxsizer.Add(self.choice, 1, wx.EXPAND)
-        serial_boxsizer.AddStretchSpacer(0)
-        serial_boxsizer.Add(reload_button)
+        serial_boxsizer.Add(reload_button, flag=wx.LEFT, border=10)
 
         baud_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
 
