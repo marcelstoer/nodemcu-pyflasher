@@ -19,8 +19,10 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name='NodeMCU-PyFlasher-5.0.0',
+          name='NodeMCU-PyFlasher',
+          version='windows-version-info.txt',
           debug=False,
           strip=False,
           upx=True,
-          console=False , icon='images\\icon-256.ico')
+          console=False,
+          icon='images\\icon-256.ico')
