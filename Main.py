@@ -11,6 +11,7 @@ import esptool
 import threading
 import json
 import images as images
+import serial
 from serial import SerialException
 from serial.tools import list_ports
 
@@ -33,6 +34,7 @@ __auto_select__ = "Auto-select"
 __auto_select_explanation__ = "(first port with Espressif device)"
 __supported_baud_rates__ = [9600, 57600, 74880, 115200, 230400, 460800, 921600]
 
+DEVNULL = open(os.devnull, 'w')
 # ---------------------------------------------------------------------------
 
 
@@ -104,6 +106,50 @@ class FlashingThread(threading.Thread):
             self._parent.report_error(e.strerror)
             raise e
 
+
+# ---------------------------------------------------------------------------
+class Pyflasher(Exception):
+    pass
+
+
+def detect_chip(port):
+    try:
+        chip = esptool.ESPLoader.detect_chip(port)
+    except esptool.FatalError as err:
+        raise Pyflasher("ESP Chip Auto-Detection failed: {}".format(err))
+
+    try:
+        chip.connect()
+    except esptool.FatalError as err:
+        raise Pyflasher("Error connecting to ESP: {}".format(err))
+
+    return chip
+
+
+def read_chip_property(func, *args, **kwargs):
+    try:
+        return prevent_print(func, *args, **kwargs)
+    except esptool.FatalError as err:
+        raise Pyflasher("Reading chip details failed: {}".format(err))
+
+
+def prevent_print(func, *args, **kwargs):
+    orig_sys_stdout = sys.stdout
+    sys.stdout = DEVNULL
+    try:
+        return func(*args, **kwargs)
+    except serial.SerialException as err:
+        raise Pyflasher("Serial port closed: {}".format(err))
+    finally:
+        sys.stdout = orig_sys_stdout
+        pass
+
+
+def esptool_read_mac(port):
+    chip = detect_chip(port)
+    mac_address = (':'.join('{:02X}'.format(x) for x in read_chip_property(chip.read_mac)))
+    print(f'MAC - {mac_address}')
+    return mac_address.lower()
 
 # ---------------------------------------------------------------------------
 
@@ -201,11 +247,21 @@ class NodeMcuFlasher(wx.Frame):
         def on_pick_file(event):
             self._config.firmware_path = event.GetPath().replace("'", "")
 
+        def on_read_mac(event=None):
+            print('Reading MAC')
+            if self._config.port is None:
+                print("no port selected")
+                wx.MessageBox("No Port Selected !", caption="Select Port", style=wx.OK | wx.ICON_ERROR)
+            else:
+                self.mac_text_ctrl.SetValue("")
+                mac_add = esptool_read_mac(self._config.port)
+                self.mac_text_ctrl.SetValue(mac_add)
+
         panel = wx.Panel(self)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
 
-        fgs = wx.FlexGridSizer(7, 2, 10, 10)
+        fgs = wx.FlexGridSizer(8, 2, 10, 10)
 
         self.choice = wx.Choice(panel, choices=self._get_serial_ports())
         self.choice.Bind(wx.EVT_CHOICE, on_select_port)
@@ -304,15 +360,26 @@ class NodeMcuFlasher(wx.Frame):
         erase_label = wx.StaticText(panel, label="Erase flash")
         console_label = wx.StaticText(panel, label="Console")
 
+        mac_address_label = wx.StaticText(panel, label="MAC Address")
+        read_mac_button = wx.Button(panel, label="Read MAC")
+        read_mac_button.Bind(wx.EVT_BUTTON, on_read_mac)
+
+        self.mac_text_ctrl = wx.TextCtrl(panel, style=wx.TE_READONLY)
+
+        mac_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
+        mac_boxsizer.Add(self.mac_text_ctrl)
+        mac_boxsizer.Add(read_mac_button, flag=wx.LEFT, border=10)
+
         fgs.AddMany([
                     port_label, (serial_boxsizer, 1, wx.EXPAND),
                     file_label, (file_picker, 1, wx.EXPAND),
                     baud_label, baud_boxsizer,
                     flashmode_label_boxsizer, flashmode_boxsizer,
                     erase_label, erase_boxsizer,
+                    mac_address_label, mac_boxsizer,
                     (wx.StaticText(panel, label="")), (button, 1, wx.EXPAND),
                     (console_label, 1, wx.EXPAND), (self.console_ctrl, 1, wx.EXPAND)])
-        fgs.AddGrowableRow(6, 1)
+        fgs.AddGrowableRow(7, 1)
         fgs.AddGrowableCol(1, 1)
         hbox.Add(fgs, proportion=2, flag=wx.ALL | wx.EXPAND, border=15)
         panel.SetSizer(hbox)
@@ -429,7 +496,6 @@ class App(wx.App, wx.lib.mixins.inspection.InspectionMixin):
         # can see the SplashScreen effect.
         splash = MySplashScreen()
         splash.Show()
-
         return True
 
 
