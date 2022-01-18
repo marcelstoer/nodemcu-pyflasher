@@ -13,6 +13,10 @@ import json
 import images as images
 from serial import SerialException
 from serial.tools import list_ports
+import locale
+
+# see https://discuss.wxpython.org/t/wxpython4-1-1-python3-8-locale-wxassertionerror/35168
+locale.setlocale(locale.LC_ALL, 'C')
 
 __version__ = "5.0.0"
 __flash_help__ = '''
@@ -416,6 +420,8 @@ class MySplashScreen(wx.adv.SplashScreen):
 # ----------------------------------------------------------------------------
 class App(wx.App, wx.lib.mixins.inspection.InspectionMixin):
     def OnInit(self):
+        # see https://discuss.wxpython.org/t/wxpython4-1-1-python3-8-locale-wxassertionerror/35168
+        self.ResetLocale()
         wx.SystemOptions.SetOption("mac.window-plain-transition", 1)
         self.SetAppName("NodeMCU PyFlasher")
 
