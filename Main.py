@@ -20,7 +20,7 @@ locale.setlocale(locale.LC_ALL, 'C')
 
 __version__ = "5.0.0"
 __flash_help__ = '''
-<p>This setting is highly dependent on your device!<p>
+<p>This setting is highly dependent on your device!!<p>
 <p>
   Details at <a style="color: #004CE5;"
         href="https://www.esp32.com/viewtopic.php?p=5523&sid=08ef44e13610ecf2a2a33bb173b0fd5c#p5523">http://bit.ly/2v5Rd32</a>
@@ -152,7 +152,7 @@ class FlashConfig:
 
 # ---------------------------------------------------------------------------
 class NodeMcuFlasher(wx.Frame):
-
+    
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, -1, title, size=(725, 650),
                           style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
@@ -164,7 +164,7 @@ class NodeMcuFlasher(wx.Frame):
         self._init_ui()
 
         sys.stdout = RedirectText(self.console_ctrl)
-
+        
         self.Centre(wx.BOTH)
         self.Show(True)
         print("Connect your device")
@@ -172,6 +172,7 @@ class NodeMcuFlasher(wx.Frame):
         print("turn off Bluetooth")
 
     def _init_ui(self):
+
         def on_reload(event):
             self.choice.SetItems(self._get_serial_ports())
 
@@ -206,6 +207,15 @@ class NodeMcuFlasher(wx.Frame):
             self._config.firmware_path = event.GetPath().replace("'", "")
 
         panel = wx.Panel(self)
+
+        # Fix popup that never goes away.
+        def onHover(event):
+            global hovered
+            if(len(hovered) != 0 ):
+                hovered[0].Dismiss() 
+                hovered = []
+
+        panel.Bind(wx.EVT_MOTION,onHover)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -287,15 +297,23 @@ class NodeMcuFlasher(wx.Frame):
         flashmode_label = wx.StaticText(panel, label="Flash mode")
 
         def on_info_hover(event):
-            from HtmlPopupTransientWindow import HtmlPopupTransientWindow
-            win = HtmlPopupTransientWindow(self, wx.SIMPLE_BORDER, __flash_help__, "#FFB6C1", (410, 140))
+            global hovered
+            if(len(hovered) == 0):
+                from HtmlPopupTransientWindow import HtmlPopupTransientWindow
+                win = HtmlPopupTransientWindow(self, wx.SIMPLE_BORDER, __flash_help__, "#FFB6C1", (410, 140))
+                
+                image = event.GetEventObject()
+                image_position = image.ClientToScreen((0, 0))
+                image_size = image.GetSize()
+                win.Position(image_position, (0, image_size[1]))
 
-            image = event.GetEventObject()
-            image_position = image.ClientToScreen((0, 0))
-            image_size = image.GetSize()
-            win.Position(image_position, (0, image_size[1]))
-
-            win.Popup()
+                win.Popup()
+                
+                
+                hovered = [win]
+                print("event")
+            
+            
 
         icon = wx.StaticBitmap(panel, wx.ID_ANY, images.Info.GetBitmap())
         icon.Bind(wx.EVT_MOTION, on_info_hover)
@@ -391,6 +409,8 @@ class NodeMcuFlasher(wx.Frame):
 # ---------------------------------------------------------------------------
 class MySplashScreen(wx.adv.SplashScreen):
     def __init__(self):
+        global hovered
+        hovered = []
         wx.adv.SplashScreen.__init__(self, images.Splash.GetBitmap(),
                                      wx.adv.SPLASH_CENTRE_ON_SCREEN | wx.adv.SPLASH_TIMEOUT, 2500, None, -1)
         self.Bind(wx.EVT_CLOSE, self._on_close)
