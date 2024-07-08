@@ -20,7 +20,7 @@ locale.setlocale(locale.LC_ALL, 'C')
 
 __version__ = "5.0.0"
 __flash_help__ = '''
-<p>This setting is highly dependent on your device!!<p>
+<p>This setting is highly dependent on your device!<p>
 <p>
   Details at <a style="color: #004CE5;"
         href="https://www.esp32.com/viewtopic.php?p=5523&sid=08ef44e13610ecf2a2a33bb173b0fd5c#p5523">http://bit.ly/2v5Rd32</a>
@@ -152,7 +152,7 @@ class FlashConfig:
 
 # ---------------------------------------------------------------------------
 class NodeMcuFlasher(wx.Frame):
-    
+
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, -1, title, size=(725, 650),
                           style=wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
@@ -164,7 +164,7 @@ class NodeMcuFlasher(wx.Frame):
         self._init_ui()
 
         sys.stdout = RedirectText(self.console_ctrl)
-        
+
         self.Centre(wx.BOTH)
         self.Show(True)
         print("Connect your device")
@@ -172,7 +172,6 @@ class NodeMcuFlasher(wx.Frame):
         print("turn off Bluetooth")
 
     def _init_ui(self):
-
         def on_reload(event):
             self.choice.SetItems(self._get_serial_ports())
 
@@ -308,12 +307,8 @@ class NodeMcuFlasher(wx.Frame):
                 win.Position(image_position, (0, image_size[1]))
 
                 win.Popup()
-                
-                
                 hovered = [win]
-                print("event")
-            
-            
+
 
         icon = wx.StaticBitmap(panel, wx.ID_ANY, images.Info.GetBitmap())
         icon.Bind(wx.EVT_MOTION, on_info_hover)
