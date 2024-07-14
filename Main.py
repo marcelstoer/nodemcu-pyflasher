@@ -207,6 +207,15 @@ class NodeMcuFlasher(wx.Frame):
 
         panel = wx.Panel(self)
 
+        # Fix popup that never goes away.
+        def onHover(event):
+            global hovered
+            if(len(hovered) != 0 ):
+                hovered[0].Dismiss() 
+                hovered = []
+
+        panel.Bind(wx.EVT_MOTION,onHover)
+
         hbox = wx.BoxSizer(wx.HORIZONTAL)
 
         fgs = wx.FlexGridSizer(7, 2, 10, 10)
@@ -287,15 +296,19 @@ class NodeMcuFlasher(wx.Frame):
         flashmode_label = wx.StaticText(panel, label="Flash mode")
 
         def on_info_hover(event):
-            from HtmlPopupTransientWindow import HtmlPopupTransientWindow
-            win = HtmlPopupTransientWindow(self, wx.SIMPLE_BORDER, __flash_help__, "#FFB6C1", (410, 140))
+            global hovered
+            if(len(hovered) == 0):
+                from HtmlPopupTransientWindow import HtmlPopupTransientWindow
+                win = HtmlPopupTransientWindow(self, wx.SIMPLE_BORDER, __flash_help__, "#FFB6C1", (410, 140))
+                
+                image = event.GetEventObject()
+                image_position = image.ClientToScreen((0, 0))
+                image_size = image.GetSize()
+                win.Position(image_position, (0, image_size[1]))
 
-            image = event.GetEventObject()
-            image_position = image.ClientToScreen((0, 0))
-            image_size = image.GetSize()
-            win.Position(image_position, (0, image_size[1]))
+                win.Popup()
+                hovered = [win]
 
-            win.Popup()
 
         icon = wx.StaticBitmap(panel, wx.ID_ANY, images.Info.GetBitmap())
         icon.Bind(wx.EVT_MOTION, on_info_hover)
@@ -391,6 +404,8 @@ class NodeMcuFlasher(wx.Frame):
 # ---------------------------------------------------------------------------
 class MySplashScreen(wx.adv.SplashScreen):
     def __init__(self):
+        global hovered
+        hovered = []
         wx.adv.SplashScreen.__init__(self, images.Splash.GetBitmap(),
                                      wx.adv.SPLASH_CENTRE_ON_SCREEN | wx.adv.SPLASH_TIMEOUT, 2500, None, -1)
         self.Bind(wx.EVT_CLOSE, self._on_close)
