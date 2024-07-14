@@ -1,6 +1,6 @@
 # https://github.com/DudeNr33/pyinstaller-versionfile
 # create-version-file windows-metadata.yaml --outfile windows-version-info.txt
-Version: 5.0.0
+Version: 5.1.0
 CompanyName: Marcel Stör
 FileDescription: NodeMCU PyFlasher
 InternalName: NodeMCU PyFlasher

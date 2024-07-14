@@ -1,6 +1,9 @@
-esptool>=3.0
+# Can't use v4 atm, see https://github.com/marcelstoer/nodemcu-pyflasher/issues/105
+esptool==3.3.3
 pyserial~=3.5
-wxPython~=4.1.1
-PyInstaller~=4.8
+# https://github.com/wxWidgets/Phoenix/issues/2499 prevents the use of 4.2.1.
+# 4.2.0 requires Python <=3.10 apparently.
+wxPython==4.2.0
+PyInstaller==6.9.0
 httplib2>=0.18.1
 pyinstaller-versionfile>=2.0.0

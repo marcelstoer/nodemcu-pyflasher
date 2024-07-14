@@ -18,7 +18,7 @@ import locale
 # see https://discuss.wxpython.org/t/wxpython4-1-1-python3-8-locale-wxassertionerror/35168
 locale.setlocale(locale.LC_ALL, 'C')
 
-__version__ = "5.0.0"
+__version__ = "5.1.0"
 __flash_help__ = '''
 <p>This setting is highly dependent on your device!<p>
 <p>

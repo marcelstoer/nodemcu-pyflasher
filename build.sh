@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # rm -fr build dist
-VERSION=5.0.0
+VERSION=5.1.0
 NAME="NodeMCU PyFlasher"
 DIST_NAME="NodeMCU-PyFlasher"
 
 pyinstaller --log-level=DEBUG \
             --noconfirm \
-            --windowed \
             build-on-mac.spec
 
 # https://github.com/sindresorhus/create-dmg
