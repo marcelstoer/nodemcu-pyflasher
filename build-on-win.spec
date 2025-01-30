@@ -1,11 +1,17 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+# We need to add the flasher stub JSON files explicitly: https://github.com/espressif/esptool/issues/1059
+local_stub_flasher_path = "./.venv/Lib/site-packages/esptool/targets/stub_flasher"
 
 a = Analysis(
     ['nodemcu-pyflasher.py'],
     pathex=[],
     binaries=[],
-    datas=[("images", "images")],
+    datas=[
+        ("images", "images"),
+        ("{}/1".format(local_stub_flasher_path), "./esptool/targets/stub_flasher/1"),
+        ("{}/2".format(local_stub_flasher_path), "./esptool/targets/stub_flasher/2")
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
