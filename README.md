@@ -8,6 +8,35 @@ Self-contained [NodeMCU](https://github.com/nodemcu/nodemcu-firmware) flasher wi
 
 ![Image of NodeMCU PyFlasher GUI](images/gui.png)
 
+## 项目来源
+
+本项目 Fork 自 [marcelstoer/nodemcu-pyflasher](https://github.com/marcelstoer/nodemcu-pyflasher)，原项目使用 MIT 许可证。本仓库用于 Fork 与改造实践，原始版权与许可证声明见 [LICENSE](LICENSE)。
+
+## 我的改动
+
+1. 界面文案中文化：串口、固件文件、波特率、Flash 模式、擦除 Flash、控制台等标签，以及按钮、菜单、状态栏和控制台提示信息全部改为中文。
+2. 应用名改为「ESP 固件烧录器」，窗口标题、任务栏名称与「关于」对话框同步更新。
+3. 打包产物的可执行文件名由 `NodeMCU-PyFlasher.exe` 改为 `ESP-Flasher.exe`。
+
+## 本地运行
+
+```bat
+py -3.13 -m venv .venv
+.venv\Scripts\activate
+python -m pip install -r requirements.txt
+python nodemcu-pyflasher.py
+```
+
+## 构建与打包
+
+在项目根目录执行：
+
+```bat
+build.bat
+```
+
+`build.bat` 调用 PyInstaller 并读取 [build-on-win.spec](build-on-win.spec)，产物为 `dist\ESP-Flasher.exe`，可脱离 Python 环境直接双击运行。
+
 ## Installation
 NodeMCU PyFlasher doesn't have to be installed, just double-click it and it'll start. Check the [releases section](https://github.com/marcelstoer/nodemcu-pyflasher/releases) for downloads for your platform. For every release there's at least a .exe file for Windows. Starting from 3.0 there's also a .dmg for macOS.
 
