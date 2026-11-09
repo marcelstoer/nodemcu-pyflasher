@@ -23,12 +23,13 @@ class AboutDlg(wx.Dialog):
     <img src="{0}/images/espressif-64.png" width="64" height="64" alt="Espressif, producers of ESP8266 et.al.">
     <img src="{0}/images/wxpython-64.png" width="64" height="43" alt="wxPython, cross-platform GUI framework">
 
-    <h1>NodeMCU PyFlasher</h1>
+    <h1>ESP 固件烧录器</h1>
 
-    <p>Version {1}</p>
+    <p>版本 {1}</p>
 
-    <p>Fork the <a style="color: #004CE5;" href="https://github.com/marcelstoer/nodemcu-pyflasher">project on
-    GitHub</a> and help improve it for all!</p>
+    <p>本项目基于
+    <a style="color: #004CE5;" href="https://github.com/marcelstoer/nodemcu-pyflasher">NodeMCU PyFlasher</a>
+    改造，界面已中文化，用于给 ESP8266 / ESP32 等乐鑫芯片烧录固件。</p>
 
     <p>
     As with everything I offer for free, this is donation-ware.
@@ -41,7 +42,7 @@ class AboutDlg(wx.Dialog):
 
     <p>
         <wxp module="wx" class="Button">
-            <param name="label" value="Close">
+            <param name="label" value="关闭">
             <param name="id" value="ID_OK">
         </wxp>
     </p>
@@ -51,7 +52,7 @@ class AboutDlg(wx.Dialog):
 '''
 
     def __init__(self, parent):
-        wx.Dialog.__init__(self, parent, wx.ID_ANY, "About NodeMCU PyFlasher")
+        wx.Dialog.__init__(self, parent, wx.ID_ANY, "关于 ESP 固件烧录器")
         html = HtmlWindow(self, wx.ID_ANY, size=(420, -1))
         if "gtk2" in wx.PlatformInfo or "gtk3" in wx.PlatformInfo:
             html.SetStandardFonts()

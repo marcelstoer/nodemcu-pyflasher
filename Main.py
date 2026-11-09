@@ -33,8 +33,8 @@ __flash_help__ = '''
 </ul>
 </p>
 '''
-__auto_select__ = "Auto-select"
-__auto_select_explanation__ = "(first port with Espressif device)"
+__auto_select__ = "自动选择"
+__auto_select_explanation__ = "（第一个检测到的乐鑫设备）"
 __supported_baud_rates__ = [9600, 57600, 74880, 115200, 230400, 460800, 921600]
 
 # ---------------------------------------------------------------------------
@@ -96,14 +96,13 @@ class FlashingThread(threading.Thread):
             if self._config.erase_before_flash:
                 command.append("--erase-all")
 
-            print("Command: esptool.py %s\n" % " ".join(command))
+            print("执行命令: esptool.py %s\n" % " ".join(command))
 
             esptool.main(command)
 
             # The last line printed by esptool is "Staying in bootloader." -> some indication that the process is
             # done is needed
-            print("\nFirmware successfully flashed. Unplug/replug or reset device \nto switch back to normal boot "
-                  "mode.")
+            print("\n固件烧录成功。请拔插设备或复位，\n让设备回到正常启动模式。")
         except SerialException as e:
             self._parent.report_error(e.strerror)
             raise e
@@ -167,9 +166,8 @@ class NodeMcuFlasher(wx.Frame):
 
         self.Centre(wx.BOTH)
         self.Show(True)
-        print("Connect your device")
-        print("\nIf you chose the serial port auto-select feature you might need to ")
-        print("turn off Bluetooth")
+        print("请连接你的设备")
+        print("\n如果使用自动选择串口功能，可能需要先关闭蓝牙")
 
     def _init_ui(self):
         def on_reload(event):
@@ -224,9 +222,9 @@ class NodeMcuFlasher(wx.Frame):
         self.choice.Bind(wx.EVT_CHOICE, on_select_port)
         self._select_configured_port()
 
-        reload_button = wx.Button(panel, label="Reload")
+        reload_button = wx.Button(panel, label="刷新")
         reload_button.Bind(wx.EVT_BUTTON, on_reload)
-        reload_button.SetToolTip("Reload serial device list")
+        reload_button.SetToolTip("重新扫描串口设备列表")
 
         file_picker = wx.FilePickerCtrl(panel, style=wx.FLP_USE_TEXTCTRL)
         file_picker.Bind(wx.EVT_FILEPICKER_CHANGED, on_pick_file)
@@ -261,9 +259,9 @@ class NodeMcuFlasher(wx.Frame):
             sizer.Add(radio_button)
             sizer.AddSpacer(10)
 
-        add_flash_mode_radio_button(flashmode_boxsizer, 0, "qio", "Quad I/O (QIO)")
-        add_flash_mode_radio_button(flashmode_boxsizer, 1, "dio", "Dual I/O (DIO)")
-        add_flash_mode_radio_button(flashmode_boxsizer, 2, "dout", "Dual Output (DOUT)")
+        add_flash_mode_radio_button(flashmode_boxsizer, 0, "qio", "四线 I/O (QIO)")
+        add_flash_mode_radio_button(flashmode_boxsizer, 1, "dio", "双线 I/O (DIO)")
+        add_flash_mode_radio_button(flashmode_boxsizer, 2, "dout", "双线输出 (DOUT)")
 
         erase_boxsizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -277,10 +275,10 @@ class NodeMcuFlasher(wx.Frame):
             sizer.AddSpacer(10)
 
         erase = self._config.erase_before_flash
-        add_erase_radio_button(erase_boxsizer, 0, False, "no", erase is False)
-        add_erase_radio_button(erase_boxsizer, 1, True, "yes, wipes all data", erase is True)
+        add_erase_radio_button(erase_boxsizer, 0, False, "否", erase is False)
+        add_erase_radio_button(erase_boxsizer, 1, True, "是，清除全部数据", erase is True)
 
-        button = wx.Button(panel, -1, "Flash NodeMCU")
+        button = wx.Button(panel, -1, "开始烧录")
         button.Bind(wx.EVT_BUTTON, on_clicked)
 
         self.console_ctrl = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
@@ -290,10 +288,10 @@ class NodeMcuFlasher(wx.Frame):
         self.console_ctrl.SetForegroundColour(wx.BLUE)
         self.console_ctrl.SetDefaultStyle(wx.TextAttr(wx.BLUE))
 
-        port_label = wx.StaticText(panel, label="Serial port")
-        file_label = wx.StaticText(panel, label="NodeMCU firmware")
-        baud_label = wx.StaticText(panel, label="Baud rate")
-        flashmode_label = wx.StaticText(panel, label="Flash mode")
+        port_label = wx.StaticText(panel, label="串口")
+        file_label = wx.StaticText(panel, label="固件文件")
+        baud_label = wx.StaticText(panel, label="波特率")
+        flashmode_label = wx.StaticText(panel, label="Flash 模式")
 
         def on_info_hover(event):
             global hovered
@@ -318,8 +316,8 @@ class NodeMcuFlasher(wx.Frame):
         flashmode_label_boxsizer.AddStretchSpacer(0)
         flashmode_label_boxsizer.Add(icon)
 
-        erase_label = wx.StaticText(panel, label="Erase flash")
-        console_label = wx.StaticText(panel, label="Console")
+        erase_label = wx.StaticText(panel, label="擦除 Flash")
+        console_label = wx.StaticText(panel, label="控制台")
 
         fgs.AddMany([
                     port_label, (serial_boxsizer, 1, wx.EXPAND),
@@ -355,7 +353,7 @@ class NodeMcuFlasher(wx.Frame):
     def _build_status_bar(self):
         self.statusBar = self.CreateStatusBar(2, wx.STB_SIZEGRIP)
         self.statusBar.SetStatusWidths([-2, -1])
-        status_text = "Welcome to NodeMCU PyFlasher %s" % __version__
+        status_text = "欢迎使用 ESP 固件烧录器 %s" % __version__
         self.statusBar.SetStatusText(status_text, 0)
 
     def _build_menu_bar(self):
@@ -364,16 +362,16 @@ class NodeMcuFlasher(wx.Frame):
         # File menu
         file_menu = wx.Menu()
         wx.App.SetMacExitMenuItemId(wx.ID_EXIT)
-        exit_item = file_menu.Append(wx.ID_EXIT, "E&xit\tCtrl-Q", "Exit NodeMCU PyFlasher")
+        exit_item = file_menu.Append(wx.ID_EXIT, "退出(&X)\tCtrl-Q", "退出 ESP 固件烧录器")
         exit_item.SetBitmap(images.Exit.GetBitmap())
         self.Bind(wx.EVT_MENU, self._on_exit_app, exit_item)
-        self.menuBar.Append(file_menu, "&File")
+        self.menuBar.Append(file_menu, "文件(&F)")
 
         # Help menu
         help_menu = wx.Menu()
-        help_item = help_menu.Append(wx.ID_ABOUT, '&About NodeMCU PyFlasher', 'About')
+        help_item = help_menu.Append(wx.ID_ABOUT, '关于(&A)', '关于本程序')
         self.Bind(wx.EVT_MENU, self._on_help_about, help_item)
-        self.menuBar.Append(help_menu, '&Help')
+        self.menuBar.Append(help_menu, '帮助(&H)')
 
         self.SetMenuBar(self.menuBar)
 
@@ -424,7 +422,7 @@ class MySplashScreen(wx.adv.SplashScreen):
             self._show_main()
 
     def _show_main(self):
-        frame = NodeMcuFlasher(None, "NodeMCU PyFlasher")
+        frame = NodeMcuFlasher(None, "ESP 固件烧录器")
         frame.Show()
         if self.__fc.IsRunning():
             self.Raise()
@@ -438,7 +436,7 @@ class App(wx.App, wx.lib.mixins.inspection.InspectionMixin):
         # see https://discuss.wxpython.org/t/wxpython4-1-1-python3-8-locale-wxassertionerror/35168
         self.ResetLocale()
         wx.SystemOptions.SetOption("mac.window-plain-transition", 1)
-        self.SetAppName("NodeMCU PyFlasher")
+        self.SetAppName("ESP 固件烧录器")
 
         # Create and show the splash screen.  It will then create and
         # show the main frame when it is time to do so.  Normally when
