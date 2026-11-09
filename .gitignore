@@ -91,3 +91,9 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# 构建产物：不进入仓库，只走 Release
+dist/
+build/
+*.exe
+*.dmg

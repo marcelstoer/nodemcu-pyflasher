@@ -28,7 +28,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='NodeMCU-PyFlasher',
+    name='ESP-Flasher',
     version='windows-version-info.txt',
     debug=False,
     bootloader_ignore_signals=False,
